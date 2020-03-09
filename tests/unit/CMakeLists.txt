@@ -26,30 +26,34 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_executable(commissioner-tests
-    main.cpp
-    test_address.cpp
-    test_coap_secure.cpp
-    test_coap.cpp
-    test_commissioner_impl.cpp
-    test_cose.cpp
-    test_dtls.cpp
-    test_json.cpp
-    test_mesh_local_addr.cpp
-    test_pskc.cpp
-    test_socket.cpp
-    test_token_manager.cpp)
+add_executable(commissioner-tests)
 
-target_link_libraries(commissioner-tests PRIVATE
-    commissioner-app
-    commissioner-common
-    cose
-    mdns
-    mbedtls
-    pthread
-    fmt::fmt
-    event_core_static
-    event_pthreads_static)
+target_sources(commissioner-tests
+    PRIVATE
+        main.cpp
+        test_address.cpp
+        test_coap_secure.cpp
+        test_coap.cpp
+        test_commissioner_impl.cpp
+        test_cose.cpp
+        test_dtls.cpp
+        test_json.cpp
+        test_mesh_local_addr.cpp
+        test_pskc.cpp
+        test_socket.cpp
+        test_token_manager.cpp)
+
+target_link_libraries(commissioner-tests
+    PRIVATE
+        commissioner-app
+        commissioner-common
+        cose
+        mdns
+        mbedtls
+        pthread
+        fmt::fmt
+        event_core_static
+        event_pthreads_static)
 
 target_include_directories(commissioner-tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src/app

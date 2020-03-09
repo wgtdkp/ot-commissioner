@@ -26,74 +26,82 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(commissioner
-    openthread/bloom_filter.cpp
-    openthread/bloom_filter.hpp
-    openthread/crc16.cpp
-    openthread/crc16.hpp
-    openthread/pbkdf2_cmac.cpp
-    openthread/pbkdf2_cmac.hpp
-    openthread/random.cpp
-    openthread/random.hpp
-    openthread/README.md
-    openthread/sha256.cpp
-    openthread/sha256.hpp
-    cbor.cpp
-    cbor.hpp
-    coap.cpp
-    coap.hpp
-    coap_secure.hpp
-    commissioner_impl.cpp
-    commissioner_impl.hpp
-    commissioner_safe.cpp
-    commissioner_safe.hpp
-    commissioning_session.cpp
-    commissioning_session.hpp
-    cose.cpp
-    cose.hpp
-    cwt.hpp
-    dtls.cpp
-    dtls.hpp
-    endpoint.hpp
-    error.cpp
-    event.hpp
-    logging.cpp
-    logging.hpp
-    multicast_dns.cpp
-    multicast_dns.hpp
-    network_data.cpp
-    openthread
-    socket.cpp
-    socket.hpp
-    time.hpp
-    timer.hpp
-    tlv.cpp
-    tlv.hpp
-    token_manager.cpp
-    token_manager.hpp
-    udp_proxy.cpp
-    udp_proxy.hpp
-    uri.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/border_agent.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/commissioner.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/network_data.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/error.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/defines.hpp)
-target_link_libraries(commissioner PRIVATE
-    cose
-    mdns
-    mbedtls
-    pthread
-    fmt::fmt
-    event_core_static
-    event_pthreads_static
-    commissioner-common)
+add_library(commissioner)
 
-target_include_directories(commissioner PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(commissioner PRIVATE
-    ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
-    ${PROJECT_SOURCE_DIR}/third_party/libevent/repo/include
-    ${PROJECT_BINARY_DIR}/third_party/libevent/repo/include)
+target_sources(commissioner
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include/commissioner/border_agent.hpp
+        ${PROJECT_SOURCE_DIR}/include/commissioner/commissioner.hpp
+        ${PROJECT_SOURCE_DIR}/include/commissioner/network_data.hpp
+        ${PROJECT_SOURCE_DIR}/include/commissioner/error.hpp
+        ${PROJECT_SOURCE_DIR}/include/commissioner/defines.hpp
+    PRIVATE
+        openthread/bloom_filter.cpp
+        openthread/bloom_filter.hpp
+        openthread/crc16.cpp
+        openthread/crc16.hpp
+        openthread/pbkdf2_cmac.cpp
+        openthread/pbkdf2_cmac.hpp
+        openthread/random.cpp
+        openthread/random.hpp
+        openthread/README.md
+        openthread/sha256.cpp
+        openthread/sha256.hpp
+        cbor.cpp
+        cbor.hpp
+        coap.cpp
+        coap.hpp
+        coap_secure.hpp
+        commissioner_impl.cpp
+        commissioner_impl.hpp
+        commissioner_safe.cpp
+        commissioner_safe.hpp
+        commissioning_session.cpp
+        commissioning_session.hpp
+        cose.cpp
+        cose.hpp
+        cwt.hpp
+        dtls.cpp
+        dtls.hpp
+        endpoint.hpp
+        error.cpp
+        event.hpp
+        logging.cpp
+        logging.hpp
+        multicast_dns.cpp
+        multicast_dns.hpp
+        network_data.cpp
+        openthread
+        socket.cpp
+        socket.hpp
+        time.hpp
+        timer.hpp
+        tlv.cpp
+        tlv.hpp
+        token_manager.cpp
+        token_manager.hpp
+        udp_proxy.cpp
+        udp_proxy.hpp
+        uri.hpp)
+
+target_link_libraries(commissioner
+    PRIVATE
+        cose
+        mdns
+        mbedtls
+        pthread
+        fmt::fmt
+        event_core_static
+        event_pthreads_static
+        commissioner-common)
+
+target_include_directories(commissioner
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/third_party/mbedtls/repo/include
+        ${PROJECT_SOURCE_DIR}/third_party/libevent/repo/include
+        ${PROJECT_BINARY_DIR}/third_party/libevent/repo/include)
 
 install(TARGETS commissioner
         LIBRARY DESTINATION lib

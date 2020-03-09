@@ -26,10 +26,17 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(commissioner-common
-    address.cpp
-    utils.cpp)
+add_library(commissioner-common)
 
-target_include_directories(commissioner-common PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR})
+target_sources(commissioner-common
+    PUBLIC
+        address.hpp
+        utils.hpp
+    PRIVATE
+        address.cpp
+        utils.cpp)
+
+target_include_directories(commissioner-common
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR})

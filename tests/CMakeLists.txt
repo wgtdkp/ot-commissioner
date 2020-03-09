@@ -26,9 +26,4 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if (CMAKE_BUILD_TYPE AND OT_COMM_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-g -O0 --coverage)
-    add_link_options(--coverage)
-endif()
-
 add_subdirectory(unit)
