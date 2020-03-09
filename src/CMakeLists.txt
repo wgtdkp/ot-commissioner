@@ -26,10 +26,12 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if (CMAKE_BUILD_TYPE AND OT_COMM_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-g -O0 --coverage)
-    add_link_options(--coverage)
-endif()
+function(add_coverage target)
+    if (CMAKE_BUILD_TYPE AND OT_COMM_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(${target} PUBLIC -g -O0 --coverage)
+        target_link_options(${target} PUBLIC --coverage)
+    endif()
+endfunction()
 
 if (OT_COMM_APP)
     add_subdirectory(app)

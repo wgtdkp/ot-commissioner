@@ -103,6 +103,8 @@ target_include_directories(commissioner
         ${PROJECT_SOURCE_DIR}/third_party/libevent/repo/include
         ${PROJECT_BINARY_DIR}/third_party/libevent/repo/include)
 
+add_coverage(commissioner)
+
 install(TARGETS commissioner
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)

@@ -40,3 +40,5 @@ target_include_directories(commissioner-common
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_coverage(commissioner-common)
