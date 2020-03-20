@@ -59,6 +59,8 @@ add_library(commissioner
     event.hpp
     logging.cpp
     logging.hpp
+    mbedtls_error.cpp
+    mbedtls_error.hpp
     multicast_dns.cpp
     multicast_dns.hpp
     network_data.cpp
@@ -76,9 +78,10 @@ add_library(commissioner
     uri.hpp
     ${PROJECT_SOURCE_DIR}/include/commissioner/border_agent.hpp
     ${PROJECT_SOURCE_DIR}/include/commissioner/commissioner.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/network_data.hpp
+    ${PROJECT_SOURCE_DIR}/include/commissioner/defines.hpp
     ${PROJECT_SOURCE_DIR}/include/commissioner/error.hpp
-    ${PROJECT_SOURCE_DIR}/include/commissioner/defines.hpp)
+    ${PROJECT_SOURCE_DIR}/include/commissioner/network_data.hpp)
+
 target_link_libraries(commissioner PRIVATE
     cose
     mdns

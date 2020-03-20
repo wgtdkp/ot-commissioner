@@ -38,6 +38,8 @@
 
 #include <algorithm>
 
+#include <error_macros.hpp>
+
 #include "logging.hpp"
 #include "openthread/random.hpp"
 
@@ -63,7 +65,7 @@ size_t Message::GetHeaderLength() const
 {
     ByteArray buf;
 
-    ASSERT(Serialize(mHeader, buf) == Error::kNone);
+    ASSERT_SUCCESS(Serialize(mHeader, buf));
     return buf.size();
 }
 
@@ -80,11 +82,13 @@ bool Message::IsTokenEqual(const Message &aMessage) const
 
 Error Message::AppendOption(OptionType aNumber, const OptionValue &aValue)
 {
-    Error error = Error::kNone;
+    Error error;
 
     // This will silently ignore options with unrecognized
     // option number and elective options with bad value.
-    VerifyOrExit(IsValidOption(aNumber, aValue), error = Error::kInvalidArgs);
+    if (!IsValidOption(aNumber, aValue)) {
+        ExitNow(error = ERROR_INVALID_ARGS("invalid CoAP option (number={})", aNumber));
+    }
 
     if (aNumber == OptionType::kUriPath)
     {
@@ -104,41 +108,48 @@ exit:
 
 Error Message::GetOption(std::string &aValue, OptionType aNumber) const
 {
+    Error error;
     auto option = GetOption(aNumber);
-    if (option == nullptr)
-    {
-        return Error::kNotFound;
-    }
+
+    VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
+
     aValue = option->GetStringValue();
-    return Error::kNone;
+
+exit:
+    return error;
 }
 
 Error Message::GetOption(uint32_t &aValue, OptionType aNumber) const
 {
+    Error error;
     auto option = GetOption(aNumber);
-    if (option == nullptr)
-    {
-        return Error::kNotFound;
-    }
+
+    VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
+
     aValue = option->GetUint32Value();
-    return Error::kNone;
+
+exit:
+    return error;
 }
 
 Error Message::GetOption(ByteArray &aValue, OptionType aNumber) const
 {
+    Error error;
     auto option = GetOption(aNumber);
-    if (option == nullptr)
-    {
-        return Error::kNotFound;
-    }
+
+    VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
+
     aValue = option->GetOpaqueValue();
-    return Error::kNone;
+
+exit:
+    return error;
 }
 
 Error Message::SetUriPath(const std::string &aUriPath)
 {
     Error       error;
     std::string NormalizedUriPath = aUriPath;
+
     SuccessOrExit(error = NormalizeUriPath(NormalizedUriPath));
     SuccessOrExit(error = AppendOption(OptionType::kUriPath, NormalizedUriPath));
 
@@ -153,26 +164,28 @@ Error Message::GetContentFormat(ContentFormat &aContentFormat) const
 
     SuccessOrExit(error = GetOption(value, OptionType::kContentFormat));
     aContentFormat = utils::from_underlying<ContentFormat>(value);
+
 exit:
     return error;
 }
 
 Error Message::GetAccept(ContentFormat &aAcceptFormat) const
 {
+    Error error;
+
     auto option = GetOption(OptionType::kAccept);
-    if (option == nullptr)
-    {
-        return Error::kNotFound;
-    }
+    VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("cannot find valid CoAP Accept option"));
     aAcceptFormat = utils::from_underlying<ContentFormat>(option->GetUint32Value());
-    return Error::kNone;
+
+exit:
+    return error;
 }
 
 Error Message::Serialize(const Header &aHeader, ByteArray &aBuf) const
 {
-    Error error = Error::kNone;
+    Error error;
 
-    VerifyOrExit(aHeader.IsValid(), error = Error::kBadFormat);
+    VerifyOrExit(aHeader.IsValid(), error = ERROR_INVALID_ARGS("serialize an invalid CoAP message header"));
 
     aBuf.push_back((aHeader.mVersion << 6) | (aHeader.mType << 4) | aHeader.mTokenLength);
     aBuf.push_back(aHeader.mCode);
@@ -186,23 +199,28 @@ exit:
 
 Error Message::Deserialize(Header &aHeader, const ByteArray &aBuf, size_t &aOffset)
 {
-    Error error = Error::kNone;
+    Error error;
+    Header header;
+    size_t offset = aOffset;
 
-    VerifyOrExit(aOffset < aBuf.size(), error = Error::kBadFormat);
-    aHeader.mVersion     = aBuf[aOffset] >> 6;
-    aHeader.mType        = aBuf[aOffset] >> 4;
-    aHeader.mTokenLength = aBuf[aOffset++];
+    VerifyOrExit(offset < aBuf.size(), error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
+    header.mVersion     = aBuf[offset] >> 6;
+    header.mType        = aBuf[offset] >> 4;
+    header.mTokenLength = aBuf[offset++];
 
-    VerifyOrExit(aOffset < aBuf.size(), error = Error::kBadFormat);
-    aHeader.mCode = aBuf[aOffset++];
+    VerifyOrExit(offset < aBuf.size(), error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
+    header.mCode = aBuf[offset++];
 
-    VerifyOrExit(aOffset + 1 < aBuf.size(), error = Error::kBadFormat);
-    aHeader.mMessageId = aBuf[aOffset++];
-    aHeader.mMessageId = (aHeader.mMessageId << 8) | aBuf[aOffset++];
+    VerifyOrExit(offset + 1 < aBuf.size(), error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
+    header.mMessageId = aBuf[offset++];
+    header.mMessageId = (header.mMessageId << 8) | aBuf[offset++];
 
-    VerifyOrExit(aOffset + aHeader.mTokenLength <= aBuf.size(), error = Error::kBadFormat);
-    memcpy(aHeader.mToken, &aBuf[aOffset], std::min(aHeader.mTokenLength, kMaxTokenLength));
-    aOffset += aHeader.mTokenLength;
+    VerifyOrExit(offset + header.mTokenLength <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
+    memcpy(header.mToken, &aBuf[offset], std::min(header.mTokenLength, kMaxTokenLength));
+    offset += header.mTokenLength;
+
+    aHeader = header;
+    aOffset = offset;
 
 exit:
     return error;
@@ -218,7 +236,7 @@ Error Message::Serialize(OptionType         aOptionNumber,
                          uint16_t           aLastOptionNumber,
                          ByteArray &        aBuf) const
 {
-    Error    error = Error::kNone;
+    Error    error;
     uint16_t delta = utils::to_underlying(aOptionNumber) - aLastOptionNumber;
     uint16_t length;
     uint16_t valueLength = aOptionValue.GetLength();
@@ -227,7 +245,7 @@ Error Message::Serialize(OptionType         aOptionNumber,
 
     ASSERT(utils::to_underlying(aOptionNumber) >= aLastOptionNumber);
 
-    VerifyOrExit(IsValidOption(aOptionNumber, aOptionValue), error = Error::kBadFormat);
+    VerifyOrExit(IsValidOption(aOptionNumber, aOptionValue), error = ERROR_INVALID_ARGS("option (number={}) is not valid", aOptionNumber));
 
     length = 1;
     length += delta < kOption1ByteExtensionOffset ? 0 : (delta < kOption2ByteExtensionOffset ? 1 : 2);
@@ -284,14 +302,14 @@ Error Message::Deserialize(OptionType &     aOptionNumber,
                            const ByteArray &aBuf,
                            size_t &         aOffset)
 {
-    Error    error = Error::kNone;
+    Error    error;
     uint16_t delta;
     uint16_t length;
     uint16_t valueLength;
     size_t   firstByte = aOffset;
     size_t   extend    = aOffset + 1;
 
-    VerifyOrExit(firstByte < aBuf.size(), error = Error::kBadFormat);
+    VerifyOrExit(firstByte < aBuf.size(), error = ERROR_BAD_FORMAT("premature end of a CoAP option"));
 
     delta       = aBuf[firstByte] >> 4;
     valueLength = aBuf[firstByte] & 0x0f;
@@ -300,7 +318,7 @@ Error Message::Deserialize(OptionType &     aOptionNumber,
     length += delta < kOption1ByteExtensionOffset ? 0 : (delta < kOption2ByteExtensionOffset ? 1 : 2);
     length += valueLength < kOption1ByteExtensionOffset ? 0 : (valueLength < kOption2ByteExtensionOffset ? 1 : 2);
 
-    VerifyOrExit(firstByte + length <= aBuf.size(), error = Error::kBadFormat);
+    VerifyOrExit(firstByte + length <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of a CoAP option"));
 
     if (delta < kOption1ByteExtension)
     {
@@ -317,8 +335,11 @@ Error Message::Deserialize(OptionType &     aOptionNumber,
     }
     else
     {
-        VerifyOrExit(valueLength == 0x0f, error = Error::kBadFormat);
-        ExitNow(error = Error::kNotFound);
+
+        // we have delta == 0x0f
+
+        VerifyOrExit(valueLength == 0x0f, error = ERROR_BAD_FORMAT("invalid CoAP option (firstByte={:X})", aBuf[firstByte]));
+        ExitNow(error = ERROR_NOT_FOUND("cannot find more CoAP option"));
     }
 
     if (valueLength < kOption1ByteExtension)
@@ -336,12 +357,12 @@ Error Message::Deserialize(OptionType &     aOptionNumber,
     }
     else
     {
-        ExitNow(error = Error::kBadFormat);
+        ExitNow(error = ERROR_BAD_FORMAT("invalid CoAP option (firstByte={:X})", aBuf[firstByte]));
     }
 
     ASSERT(firstByte + length == extend);
 
-    VerifyOrExit(valueLength + extend <= aBuf.size(), error = Error::kBadFormat);
+    VerifyOrExit(valueLength + extend <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of a CoAP option"));
 
     aOptionNumber = utils::from_underlying<OptionType>(aLastOptionNumber + delta);
     aOptionValue  = ByteArray{aBuf.begin() + extend, aBuf.begin() + extend + valueLength};
@@ -386,15 +407,20 @@ void Coap::AbortRequests()
 {
     while (!mRequestsCache.IsEmpty())
     {
-        FinalizeTransaction(mRequestsCache.Front(), nullptr, Error::kAbort);
+        std::string uri = "UNKNOWN_URI";
+        mRequestsCache.Front().mRequest->GetUriPath(uri).IgnoreError();
+        FinalizeTransaction(mRequestsCache.Front(), nullptr, ERROR_CANCELLED("request to {} was cancelled", uri));
     }
 }
 
 Error Coap::AddResource(const Resource &aResource)
 {
-    Error error = Error::kNone;
-    auto  res   = mResources.find(aResource.GetUriPath());
-    VerifyOrExit(res == mResources.end(), error = Error::kAlready);
+    Error error;
+    auto  res = mResources.find(aResource.GetUriPath());
+
+    if (res != mResources.end()) {
+      ExitNow(error = ERROR_ALREADY_EXISTS("CoAP resource {} already exists", aResource.GetUriPath()));
+    }
     mResources.emplace(aResource.GetUriPath(), aResource);
 
 exit:
@@ -413,10 +439,11 @@ void Coap::SetDefaultHandler(RequestHandler aHandler)
 
 void Coap::SendRequest(const Request &aRequest, ResponseHandler aHandler)
 {
-    Error error   = Error::kNone;
+    Error error;
     auto  request = std::make_shared<Request>(aRequest);
 
-    VerifyOrExit(request->IsConfirmable() || request->IsNonConfirmable(), error = Error::kInvalidArgs);
+    VerifyOrExit(request->IsConfirmable() || request->IsNonConfirmable(),
+        error = ERROR_INVALID_ARGS("a CoAP request is neither Confirmable nor NON-Confirmable"));
 
     ASSERT(request->GetMessageId() == 0);
     request->SetMessageId(AllocMessageId());
@@ -430,7 +457,7 @@ void Coap::SendRequest(const Request &aRequest, ResponseHandler aHandler)
     }
 
 exit:
-    if (error != Error::kNone && aHandler != nullptr)
+    if (!error.NoError() && aHandler != nullptr)
     {
         aHandler(nullptr, error);
     }
@@ -456,6 +483,14 @@ Error Coap::SendResponse(const Request &aRequest, Response &aResponse)
     return Send(aResponse);
 }
 
+Error Coap::SendEmptyChanged(const Request &aRequest)
+{
+    if (!aRequest.IsConfirmable()) {
+        return ERROR_INVALID_ARGS("the CoAP request is not Confirmable");
+    }
+    return SendHeaderResponse(Code::kChanged, aRequest);
+}
+
 void Coap::Receive(Endpoint &aEndpoint, const ByteArray &aBuf)
 {
     Error error;
@@ -466,9 +501,10 @@ void Coap::Receive(Endpoint &aEndpoint, const ByteArray &aBuf)
 
 void Coap::ReceiveMessage(Endpoint &aEndpoint, std::shared_ptr<Message> aMessage, Error error)
 {
-    if (error != Error::kNone)
+    if (!error.NoError())
     {
         // Silently drop a bad formatted message
+        LOG_INFO("Received a CoAP message in bad format: {}", error.GetMessage());
     }
     else
     {
@@ -488,7 +524,7 @@ void Coap::ReceiveMessage(Endpoint &aEndpoint, std::shared_ptr<Message> aMessage
 
 void Coap::HandleRequest(const Request &aRequest)
 {
-    Error                                error    = Error::kNone;
+    Error                                error;
     const Response *                     response = nullptr;
     std::string                          uriPath;
     decltype(mResources)::const_iterator resource;
@@ -505,23 +541,23 @@ void Coap::HandleRequest(const Request &aRequest)
     if (resource != mResources.end())
     {
         resource->second.HandleRequest(aRequest);
-        ExitNow(error = Error::kNone);
+        ExitNow(error = ERROR_NONE);
     }
     else if (mDefaultHandler != nullptr)
     {
         mDefaultHandler(aRequest);
-        ExitNow(error = Error::kNone);
+        ExitNow(error = ERROR_NONE);
     }
     else
     {
         SendNotFound(aRequest);
-        ExitNow(error = Error::kNotFound);
+        ExitNow(error = ERROR_NONE);
     }
 
 exit:
-    if (error != Error::kNone)
+    if (!error.NoError())
     {
-        LOG_INFO("CoAP: handle request failed: %s", ErrorToString(error));
+        LOG_INFO("handle CoAP request failed: {}", error.ToString());
     }
     return;
 }
@@ -529,6 +565,7 @@ exit:
 void Coap::HandleResponse(const Response &aResponse)
 {
     const RequestHolder *requestHolder = nullptr;
+    std::string requestUri = "UNKNOWN_URI";
 
     requestHolder = mRequestsCache.Match(aResponse);
     if (requestHolder == nullptr)
@@ -540,12 +577,13 @@ void Coap::HandleResponse(const Response &aResponse)
         ExitNow();
     }
 
+    requestHolder->mRequest->GetUriPath(requestUri).IgnoreError();
     switch (aResponse.GetType())
     {
     case Type::kReset:
         if (aResponse.IsEmpty())
         {
-            FinalizeTransaction(*requestHolder, nullptr, Error::kAbort);
+            FinalizeTransaction(*requestHolder, nullptr, ERROR_ABORTED("request to {} was reset by peer", requestUri));
         }
 
         // Silently ignore non-empty reset messages (RFC 7252, p. 4.2).
@@ -569,7 +607,7 @@ void Coap::HandleResponse(const Response &aResponse)
         else if (aResponse.IsResponse() && aResponse.IsTokenEqual(*requestHolder->mRequest))
         {
             // Piggybacked response.
-            FinalizeTransaction(*requestHolder, &aResponse, Error::kNone);
+            FinalizeTransaction(*requestHolder, &aResponse, ERROR_NONE);
         }
 
         // Silently ignore acknowledgments carrying requests (RFC 7252, p. 4.2)
@@ -584,7 +622,7 @@ void Coap::HandleResponse(const Response &aResponse)
 
     case Type::kNonConfirmable:
         // Separate response.
-        FinalizeTransaction(*requestHolder, &aResponse, Error::kNone);
+        FinalizeTransaction(*requestHolder, &aResponse, ERROR_NONE);
         break;
     }
 
@@ -601,6 +639,9 @@ void Coap::Retransmit(Timer &)
     while (!mRequestsCache.IsEmpty() && mRequestsCache.Earliest() < now)
     {
         auto requestHolder = mRequestsCache.Eliminate();
+
+        std::string uri = "UNKOWN_URI";
+        requestHolder.mRequest->GetUriPath(uri).IgnoreError();
 
         if ((requestHolder.mRequest->IsConfirmable()) && (requestHolder.mRetransmissionCount < kMaxRetransmit))
         {
@@ -620,9 +661,9 @@ void Coap::Retransmit(Timer &)
                 LOG_INFO("retransmit of request {}, retransmit count = {}", uri, requestHolder.mRetransmissionCount);
 
                 auto error = Send(*requestHolder.mRequest);
-                if (error != Error::kNone)
+                if (!error.NoError())
                 {
-                    LOG_WARN("retransmit of request {} failed: {}", uri, ErrorToString(error));
+                    LOG_WARN("retransmit of request {} failed: {}", uri, error.ToString());
                     FinalizeTransaction(requestHolder, nullptr, error);
                 }
             }
@@ -634,14 +675,14 @@ void Coap::Retransmit(Timer &)
         else
         {
             // No expected response or acknowledgment.
-            FinalizeTransaction(requestHolder, nullptr, Error::kTimeout);
+            FinalizeTransaction(requestHolder, nullptr, ERROR_TIMEOUT("request to {} timeout", uri));
         }
     }
 }
 
 Error Coap::SendHeaderResponse(Code aCode, const Request &aRequest)
 {
-    Error    error = Error::kNone;
+    Error    error;
     Response response;
 
     switch (aRequest.GetType())
@@ -659,7 +700,7 @@ Error Coap::SendHeaderResponse(Code aCode, const Request &aRequest)
         break;
 
     default:
-        ExitNow(error = Error::kInvalidArgs);
+        ExitNow(error = ERROR_INVALID_ARGS("a CoAP request is neither Confirmable nor NON-Confirmable"));
         break;
     }
 
@@ -671,10 +712,10 @@ exit:
 
 Error Coap::SendEmptyMessage(Type aType, const Request &aRequest)
 {
-    Error    error = Error::kNone;
+    Error    error;
     Response response{aType, Code::kEmpty};
 
-    VerifyOrExit(aRequest.IsConfirmable(), error = Error::kInvalidArgs);
+    VerifyOrExit(aRequest.IsConfirmable(), error = ERROR_INVALID_ARGS("CoAP request is not Confirmable"));
 
     response.SetMessageId(aRequest.GetMessageId());
     response.SetEndpoint(aRequest.GetEndpoint());
@@ -687,7 +728,7 @@ exit:
 
 Error Coap::Send(const Message &aMessage)
 {
-    Error     error = Error::kNone;
+    Error     error;
     ByteArray data;
     SuccessOrExit(error = aMessage.Serialize(data));
 
@@ -860,7 +901,7 @@ const Coap::RequestHolder *Coap::RequestsCache::Match(const Response &aResponse)
 
 Error Message::Serialize(ByteArray &aBuf) const
 {
-    Error    error = Error::kNone;
+    Error    error;
     uint16_t lastOptionNumber;
 
     SuccessOrExit(error = Serialize(mHeader, aBuf));
@@ -927,7 +968,7 @@ Error Message::SplitUriPath(std::list<std::string> &aUriPathList, const std::str
         aUriPathList.emplace_back("/");
     }
 
-    return Error::kNone;
+    return ERROR_NONE;
 }
 
 // Normalize the uri path by:
@@ -936,7 +977,9 @@ Error Message::SplitUriPath(std::list<std::string> &aUriPathList, const std::str
 //   applying percent-decode;
 Error Message::NormalizeUriPath(std::string &aUriPath)
 {
+    auto xdigit = [](char c) { return 'A' <= c && c <= 'F' ? c - 'A' : 'a' <= c && c <= 'f' ? c - 'a' : c - '0'; };
     size_t begin = 0, end = aUriPath.size();
+    Error error;
 
     while (begin < aUriPath.size() && isspace(aUriPath[begin]))
     {
@@ -953,7 +996,6 @@ Error Message::NormalizeUriPath(std::string &aUriPath)
         aUriPath = "/" + aUriPath;
     }
 
-    auto xdigit = [](char c) { return 'A' <= c && c <= 'F' ? c - 'A' : 'a' <= c && c <= 'f' ? c - 'a' : c - '0'; };
     while (true)
     {
         auto pos = aUriPath.find_first_of('%', begin);
@@ -963,11 +1005,11 @@ Error Message::NormalizeUriPath(std::string &aUriPath)
         }
         if (pos + 2 >= aUriPath.size())
         {
-            return Error::kInvalidArgs;
+            ExitNow(error = ERROR_INVALID_ARGS("{} is not a valid CoAP URI path", aUriPath));
         }
         if (!isxdigit(aUriPath[pos + 1]) || !isxdigit(aUriPath[pos + 2]))
         {
-            return Error::kInvalidArgs;
+            ExitNow(error = ERROR_INVALID_ARGS("{} is not a valid CoAP URI path", aUriPath));
         }
 
         char c = (xdigit(aUriPath[pos + 1]) << 4) | xdigit(aUriPath[pos + 2]);
@@ -975,18 +1017,19 @@ Error Message::NormalizeUriPath(std::string &aUriPath)
         begin = pos + 1;
     }
 
-    return Error::kNone;
+exit:
+    return error;
 }
 
 std::shared_ptr<Message> Message::Deserialize(Error &aError, const ByteArray &aBuf)
 {
-    Error    error  = Error::kNone;
+    Error    error;
     size_t   offset = 0;
     uint16_t lastOptionNumber;
     auto     message = std::make_shared<Message>();
 
     SuccessOrExit(error = Deserialize(message->mHeader, aBuf, offset));
-    VerifyOrExit(message->mHeader.IsValid(), error = Error::kBadFormat);
+    VerifyOrExit(message->mHeader.IsValid(), error = ERROR_BAD_FORMAT("invalid CoAP message header"));
 
     lastOptionNumber = 0;
     while (offset < aBuf.size() && aBuf[offset] != kPayloadMarker)
@@ -998,7 +1041,8 @@ std::shared_ptr<Message> Message::Deserialize(Error &aError, const ByteArray &aB
 
         // Stop if any unrecognized option is critical.
         // Otherwise, we need to proceed to decoding following options.
-        VerifyOrExit(IsValidOption(number, value) || !IsCriticalOption(number), error = Error::kBadOption);
+        VerifyOrExit(IsValidOption(number, value) || !IsCriticalOption(number),
+            error = ERROR_BAD_FORMAT("bad CoAP option (number={}", number));
 
         message->AppendOption(number, value);
         lastOptionNumber = utils::to_underlying(number);
@@ -1008,7 +1052,7 @@ std::shared_ptr<Message> Message::Deserialize(Error &aError, const ByteArray &aB
     {
         if (aBuf[offset++] == kPayloadMarker)
         {
-            VerifyOrExit(offset < aBuf.size(), error = Error::kBadFormat);
+            VerifyOrExit(offset < aBuf.size(), error = ERROR_BAD_FORMAT("payload marker followed by empty payload"));
             message->mPayload.assign(aBuf.begin() + offset, aBuf.end());
         }
         else
@@ -1019,7 +1063,7 @@ std::shared_ptr<Message> Message::Deserialize(Error &aError, const ByteArray &aB
     }
 
 exit:
-    if (error != Error::kNone)
+    if (!error.NoError())
     {
         message = nullptr;
     }

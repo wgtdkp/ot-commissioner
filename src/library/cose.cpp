@@ -36,7 +36,10 @@
 #include <mbedtls/bignum.h>
 #include <mbedtls/ecp.h>
 
+#include <error_macros.hpp>
 #include <utils.hpp>
+
+#include "mbedtls_error.hpp"
 
 namespace ot {
 
@@ -61,167 +64,170 @@ void Sign1Message::Free(void)
 Error Sign1Message::Init(int aCoseInitFlags)
 {
     mSign = COSE_Sign0_Init(static_cast<COSE_INIT_FLAGS>(aCoseInitFlags), nullptr);
-    return mSign ? Error::kNone : Error::kOutOfMemory;
+    return mSign ? ERROR_NONE : ERROR_OUT_OF_MEMORY("create COSE SIGN1 message");
 }
 
 Error Sign1Message::Serialize(ByteArray &aBuf)
 {
-    Error  error = Error::kNone;
     size_t length;
-
     length = COSE_Encode((HCOSE)mSign, nullptr, 0, 0) + 1;
     aBuf.resize(length);
-    length = COSE_Encode((HCOSE)mSign, &aBuf[0], 0, aBuf.size());
+    length = COSE_Encode((HCOSE)mSign, aBuf.data(), 0, aBuf.size());
     aBuf.resize(length);
 
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::Deserialize(Sign1Message &aCose, const ByteArray &aBuf)
 {
-    Error       error = Error::kNone;
-    int         type;
-    HCOSE_SIGN0 sign;
+    if (aBuf.empty()) {
+        return ERROR_INVALID_ARGS("COSE SIGN1 message must not be empty");
+    }
 
-    VerifyOrExit(!aBuf.empty(), error = Error::kInvalidArgs);
-    sign = reinterpret_cast<HCOSE_SIGN0>(COSE_Decode(&aBuf[0], aBuf.size(), &type, COSE_sign0_object, nullptr));
-    VerifyOrExit(sign != nullptr && type == COSE_sign0_object, error = Error::kBadFormat);
+    int         type;
+    HCOSE_SIGN0 sign = reinterpret_cast<HCOSE_SIGN0>(COSE_Decode(aBuf.data(), aBuf.size(), &type, COSE_sign0_object, nullptr));
+    if (sign == nullptr || type != COSE_sign0_object) {
+        return ERROR_BAD_FORMAT("deserialize COSE SIGN1 message");
+    }
 
     aCose.mSign = sign;
-
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::Validate(const CborMap &aCborPublicKey)
 {
-    Error error = Error::kNone;
+    if(!aCborPublicKey.IsValid()) {
+        return ERROR_INVALID_ARGS("validate COSE SIGN1 message with invalid public key");
+    }
 
-    VerifyOrExit(aCborPublicKey.IsValid(), error = Error::kInvalidArgs);
-
-    VerifyOrExit(COSE_Sign0_validate(mSign, aCborPublicKey.GetImpl(), nullptr), error = Error::kSecurity);
-
-exit:
-    return error;
+    if (!COSE_Sign0_validate(mSign, aCborPublicKey.GetImpl(), nullptr))
+    {
+        return ERROR_SECURITY("validate COSE SIGN1 message failed");
+    }
+    return ERROR_NONE;
 }
 
 Error Sign1Message::Validate(const mbedtls_pk_context &aPubKey)
 {
-    Error                             error = Error::kNone;
     const struct mbedtls_ecp_keypair *eckey;
 
     // Accepts only EC keys
-    VerifyOrExit(mbedtls_pk_can_do(&aPubKey, MBEDTLS_PK_ECDSA), error = Error::kInvalidArgs);
-    VerifyOrExit((eckey = mbedtls_pk_ec(aPubKey)) != nullptr, error = Error::kInvalidArgs);
+    if (!mbedtls_pk_can_do(&aPubKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPubKey)) == nullptr) {
+        return ERROR_INVALID_ARGS("validate COSE SIGN1 message without valid EC public key");
+    }
 
-    VerifyOrExit(COSE_Sign0_validate_eckey(mSign, eckey, nullptr), error = Error::kSecurity);
+    if (!COSE_Sign0_validate_eckey(mSign, eckey, nullptr)) {
+        return ERROR_SECURITY("validate COSE SIGN1 message failed");
+    }
 
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::Sign(const mbedtls_pk_context &aPrivateKey)
 {
-    Error                      error = Error::kNone;
-    const mbedtls_ecp_keypair *eckey = nullptr;
+    const mbedtls_ecp_keypair *eckey;
 
-    VerifyOrExit(mbedtls_pk_can_do(&aPrivateKey, MBEDTLS_PK_ECDSA), error = Error::kInvalidArgs);
-    VerifyOrExit((eckey = mbedtls_pk_ec(aPrivateKey)) != nullptr, error = Error::kInvalidArgs);
+    // Accepts only EC keys
+    if (!mbedtls_pk_can_do(&aPrivateKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPrivateKey)) == nullptr) {
+        return ERROR_INVALID_ARGS("sign COSE SIGN1 message without valid EC private key");
+    }
 
-    VerifyOrExit(COSE_Sign0_Sign_eckey(mSign, eckey, nullptr), error = Error::kSecurity);
+    if (!COSE_Sign0_Sign_eckey(mSign, eckey, nullptr)) {
+        return ERROR_SECURITY("sign COSE SIGN1 message failed");
+    }
 
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::SetContent(const ByteArray &aContent)
 {
-    Error   error = Error::kNone;
-    uint8_t emptyContent;
-
     if (!aContent.empty())
     {
-        VerifyOrExit(COSE_Sign0_SetContent(mSign, &aContent[0], aContent.size(), nullptr), error = Error::kFailed);
+        if (!COSE_Sign0_SetContent(mSign, &aContent[0], aContent.size(), nullptr)) {
+            return ERROR_UNKNOWN("set COSE SIGN1 message content");
+        }
     }
     else
     {
-        VerifyOrExit(COSE_Sign0_SetContent(mSign, &emptyContent, 0, nullptr), error = Error::kFailed);
+        uint8_t emptyContent;
+        if (!COSE_Sign0_SetContent(mSign, &emptyContent, 0, nullptr)) {
+            return ERROR_UNKNOWN("set COSE SIGN1 message content");
+        }
     }
 
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::SetExternalData(const ByteArray &aExternalData)
 {
-    Error error = Error::kNone;
+    if (aExternalData.empty()) {
+        return ERROR_INVALID_ARGS("cannot set COSE SIGN1 message to empty external data");
+    }
 
-    VerifyOrExit(!aExternalData.empty(), error = Error::kInvalidArgs);
-    VerifyOrExit(COSE_Sign0_SetExternal(mSign, &aExternalData[0], aExternalData.size(), nullptr),
-                 error = Error::kFailed);
+    if (!COSE_Sign0_SetExternal(mSign, aExternalData.data(), aExternalData.size(), nullptr)) {
+        return  ERROR_UNKNOWN("set COSE SIGN1 message external data failed");
+    }
 
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 Error Sign1Message::AddAttribute(int key, int value, int flags)
 {
-    Error error = Error::kNone;
-
-    cn_cbor *cbor = cn_cbor_int_create(value, nullptr);
-    VerifyOrExit(cbor != nullptr, error = Error::kOutOfMemory);
-
-    error = AddAttribute(key, cbor, flags);
-
-exit:
-    if (cbor != nullptr && cbor->parent == nullptr)
-    {
-        cn_cbor_free(cbor);
+    if (cn_cbor *cbor = cn_cbor_int_create(value, nullptr)) {
+        auto error = AddAttribute(key, cbor, flags);
+        if (cbor != nullptr && cbor->parent == nullptr)
+        {
+            cn_cbor_free(cbor);
+        }
+        return error;
     }
-    return error;
+    else
+    {
+        return ERROR_OUT_OF_MEMORY("add COSE SIGN1 message attribute");
+    }
 }
 
 Error Sign1Message::AddAttribute(int aKey, const ByteArray &aValue, int aFlags)
 {
-    Error    error = Error::kNone;
-    cn_cbor *cbor  = nullptr;
-
-    VerifyOrExit(!aValue.empty(), error = Error::kInvalidArgs);
-    cbor = cn_cbor_data_create(&aValue[0], aValue.size(), nullptr);
-    VerifyOrExit(cbor != nullptr, error = Error::kOutOfMemory);
-
-    SuccessOrExit(error = AddAttribute(aKey, cbor, aFlags));
-
-exit:
-    if (cbor != nullptr && cbor->parent == nullptr)
-    {
-        cn_cbor_free(cbor);
+    if (aValue.empty()) {
+        return ERROR_INVALID_ARGS("add empty COSE SIGN1 message attribute");
     }
-    return error;
+
+    if  (cn_cbor *cbor = cn_cbor_data_create(aValue.data(), aValue.size(), nullptr)) {
+        auto error = AddAttribute(aKey, cbor, aFlags);
+        if (cbor != nullptr && cbor->parent == nullptr)
+        {
+            cn_cbor_free(cbor);
+        }
+        return error;
+    }
+    else {
+        return ERROR_OUT_OF_MEMORY("add COSE SIGN1 message attribute");
+    }
 }
 
 Error Sign1Message::AddAttribute(int key, cn_cbor *value, int flags)
 {
-    Error error = Error::kNone;
+    if (!COSE_Sign0_map_put_int(mSign, key, value, flags, nullptr))
+    {
+        return ERROR_UNKNOWN("add COSE SIGN1 message attribute");
+    }
 
-    VerifyOrExit(COSE_Sign0_map_put_int(mSign, key, value, flags, nullptr), error = Error::kFailed);
-
-exit:
-    return error;
+    return ERROR_NONE;
 }
 
 static cn_cbor *CborArrayAt(cn_cbor *arr, size_t index)
 {
-    cn_cbor *ele = nullptr;
+    if (index >= static_cast<size_t>(arr->length))
+    {
+        return nullptr;
+    }
 
-    VerifyOrExit(index <= static_cast<size_t>(arr->length));
-
-    ele = arr->first_child;
+    cn_cbor *ele = arr->first_child;
     for (size_t i = 0; i < index; ++i)
     {
         ele = ele->next;
     }
-exit:
     return ele;
 }
 
@@ -232,16 +238,20 @@ const uint8_t *Sign1Message::GetPayload(size_t &aLength)
     cn_cbor *      payload;
 
     ASSERT(mSign != nullptr);
-    VerifyOrExit((cbor = COSE_get_cbor(reinterpret_cast<HCOSE>(mSign))) != nullptr);
+    if ((cbor = COSE_get_cbor(reinterpret_cast<HCOSE>(mSign))) == nullptr) {
+        return nullptr;
+    }
 
-    VerifyOrExit(cbor->type == CN_CBOR_ARRAY && (payload = CborArrayAt(cbor, 2)) != nullptr);
+    if (cbor->type != CN_CBOR_ARRAY || (payload = CborArrayAt(cbor, 2)) == nullptr) {
+        return nullptr;
+    }
 
-    VerifyOrExit(payload->type == CN_CBOR_BYTES);
+    if (payload->type != CN_CBOR_BYTES) {
+        return nullptr;
+    }
 
     ret     = payload->v.bytes;
     aLength = payload->length;
-
-exit:
     return ret;
 }
 
@@ -249,26 +259,28 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
 {
     static constexpr size_t kMaxCoseKeyLength = 1024;
 
-    Error                             error = Error::kInvalidArgs;
+    Error error;
     const struct mbedtls_ecp_keypair *eckey;
-    int                               ec2Curve;
-    uint8_t                           xPoint[MBEDTLS_ECP_MAX_PT_LEN];
-    size_t                            xLength;
-    uint8_t                           yPoint[MBEDTLS_ECP_MAX_PT_LEN];
-    size_t                            yLength;
-    CborMap                           coseKey;
-    uint8_t                           encodedCoseKey[kMaxCoseKeyLength];
-    size_t                            encodedCoseKeyLength;
+    CborMap coseKey;
+    int ec2Curve;
+    uint8_t xPoint[MBEDTLS_ECP_MAX_PT_LEN];
+    size_t  xLength;
+    uint8_t yPoint[MBEDTLS_ECP_MAX_PT_LEN];
+    size_t  yLength;
+    uint8_t encodedCoseKey[kMaxCoseKeyLength];
+    size_t  encodedCoseKeyLength;
 
-    VerifyOrExit(mbedtls_pk_can_do(&aKey, MBEDTLS_PK_ECDSA));
-    VerifyOrExit((eckey = mbedtls_pk_ec(aKey)) != nullptr);
+    if (!mbedtls_pk_can_do(&aKey, MBEDTLS_PK_ECDSA) ||
+        (eckey = mbedtls_pk_ec(aKey)) == nullptr) {
+        ExitNow(error = ERROR_INVALID_ARGS("Make COSE key without valid EC key"));
+    }
 
     SuccessOrExit(error = coseKey.Init());
 
     // Cose key id('kid')
     if (!aKeyId.empty())
     {
-        SuccessOrExit(error = coseKey.Put(kKeyId, &aKeyId[0], aKeyId.size()));
+        SuccessOrExit(error = coseKey.Put(kKeyId, aKeyId.data(), aKeyId.size()));
     }
 
     // Cose key type
@@ -287,12 +299,14 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
         ec2Curve = kKeyEC2CurveP521;
         break;
     default:
-        ExitNow();
+        ExitNow(error = ERROR_INVALID_ARGS("make COSE key with invalid EC2 curve group ID {}", eckey->grp.id));
     }
     SuccessOrExit(error = coseKey.Put(kKeyEC2Curve, ec2Curve));
 
     // Cose key EC2 X
-    VerifyOrExit(mbedtls_mpi_write_binary(&eckey->Q.X, xPoint, sizeof(xPoint)) == 0);
+    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.X, xPoint, sizeof(xPoint))) {
+        ExitNow(error = ErrorFromMbedtlsError(fail));
+    }
 
     // 'mbedtls_mpi_write_binary' writes to the end of buffer
     xLength = mbedtls_mpi_size(&eckey->Q.X);
@@ -300,14 +314,16 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
 
     // TODO(wgtdkp): handle the situation that Y point is not presented.
     // Cose key EC2 Y
-    VerifyOrExit(mbedtls_mpi_write_binary(&eckey->Q.Y, yPoint, sizeof(yPoint)) == 0);
+    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.Y, yPoint, sizeof(yPoint))) {
+        ExitNow(error = ErrorFromMbedtlsError(fail));
+    }
+
     yLength = mbedtls_mpi_size(&eckey->Q.Y);
     SuccessOrExit(error = coseKey.Put(kKeyEC2Y, yPoint + sizeof(yPoint) - yLength, yLength));
 
     SuccessOrExit(error = coseKey.Serialize(encodedCoseKey, encodedCoseKeyLength, sizeof(encodedCoseKey)));
 
     aEncodedCoseKey.assign(encodedCoseKey, encodedCoseKey + encodedCoseKeyLength);
-    error = Error::kNone;
 
 exit:
     return error;

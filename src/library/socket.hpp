@@ -31,6 +31,9 @@
  *   The file includes definitions of Socket.
  */
 
+#ifndef SOCKET_HPP_
+#define SOCKET_HPP_
+
 #include <memory>
 #include <string>
 
@@ -150,3 +153,5 @@ private:
 } // namespace commissioner
 
 } // namespace ot
+
+#endif // SOCKET_HPP_

@@ -37,8 +37,10 @@
 
 #include <nlohmann/json.hpp>
 
-#include "commissioner_app.hpp"
+#include <error_macros.hpp>
 #include <utils.hpp>
+
+#include "commissioner_app.hpp"
 
 /**
  * This overrides how to serialize/deserialize a ByteArray.
@@ -401,7 +403,7 @@ static void from_json(const Json &aJson, ActiveOperationalDataset &aDataset)
     if (aJson.contains("MeshLocalPrefix"))
     {
         std::string prefix = aJson["MeshLocalPrefix"];
-        if (Ipv6PrefixFromString(aDataset.mMeshLocalPrefix, prefix) != Error::kNone)
+        if (!Ipv6PrefixFromString(aDataset.mMeshLocalPrefix, prefix).NoError())
         {
             throw std::exception();
         }
@@ -490,14 +492,17 @@ static void to_json(Json &aJson, const EnergyReport &aEnergyReport)
 
 Error NetworkDataFromJson(NetworkData &aNetworkData, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aNetworkData = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string NetworkDataToJson(const NetworkData &aNetworkData)
@@ -508,14 +513,17 @@ std::string NetworkDataToJson(const NetworkData &aNetworkData)
 
 Error CommissionerDatasetFromJson(CommissionerDataset &aDataset, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aDataset = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string CommissionerDatasetToJson(const CommissionerDataset &aDataset)
@@ -526,14 +534,17 @@ std::string CommissionerDatasetToJson(const CommissionerDataset &aDataset)
 
 Error BbrDatasetFromJson(BbrDataset &aDataset, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aDataset = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string BbrDatasetToJson(const BbrDataset &aDataset)
@@ -544,14 +555,17 @@ std::string BbrDatasetToJson(const BbrDataset &aDataset)
 
 Error ActiveDatasetFromJson(ActiveOperationalDataset &aDataset, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aDataset = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string ActiveDatasetToJson(const ActiveOperationalDataset &aDataset)
@@ -562,14 +576,17 @@ std::string ActiveDatasetToJson(const ActiveOperationalDataset &aDataset)
 
 Error PendingDatasetFromJson(PendingOperationalDataset &aDataset, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aDataset = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string PendingDatasetToJson(const PendingOperationalDataset &aDataset)
@@ -580,14 +597,17 @@ std::string PendingDatasetToJson(const PendingOperationalDataset &aDataset)
 
 Error AppConfigFromJson(AppConfig &aAppConfig, const std::string &aJson)
 {
+    Error error;
+
     try
     {
         aAppConfig = Json::parse(StripComments(aJson));
-        return Error::kNone;
     } catch (std::exception &e)
     {
-        return Error::kBadFormat;
+        error = {ErrorCode::kInvalidArgs, e.what()};
     }
+
+    return error;
 }
 
 std::string AppConfigToJson(const AppConfig &aAppConfig)
@@ -614,12 +634,7 @@ std::string EnergyReportMapToJson(const EnergyReportMap &aEnergyReportMap)
         auto &report     = kv.second;
 
         ASSERT(deviceAddr.IsValid());
-        Error       error;
-        std::string addr;
-        error = deviceAddr.ToString(addr);
-        ASSERT(error == Error::kNone);
-
-        json[addr] = report;
+        json[deviceAddr.ToString()] = report;
     }
     return json.dump(/* indent */ 4);
 }

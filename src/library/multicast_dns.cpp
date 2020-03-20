@@ -31,6 +31,7 @@
 #include <memory>
 
 #include <address.hpp>
+#include <error_macros.hpp>
 #include <utils.hpp>
 
 #include "logging.hpp"
@@ -58,36 +59,26 @@ BorderAgentQuerier::~BorderAgentQuerier()
 
 Error BorderAgentQuerier::Setup()
 {
-    Error error = Error::kFailed;
-
     struct timeval tv;
     evutil_timerclear(&tv);
     tv.tv_sec = kQueryTimeout;
 
+    ASSERT(mSocket < 0);
+
     int socket = mdns_socket_open_ipv4();
-
-    VerifyOrExit(mSocket < 0, error = Error::kAlready);
-
-    VerifyOrExit(socket >= 0, error = Error::kFailed);
-
-    if (event_assign(&mResponseEvent, mEventBase, socket, EV_PERSIST | EV_READ, ReceiveResponse, this) != 0)
-    {
-        ExitNow(error = Error::kFailed);
+    if (socket < 0) {
+        return ERROR_UNKNOWN("open IPv4 socket failed");
     }
-    VerifyOrExit(event_add(&mResponseEvent, &tv) == 0, error = Error::kFailed);
 
-    error   = Error::kNone;
+    if (event_assign(&mResponseEvent, mEventBase, socket, EV_PERSIST | EV_READ, ReceiveResponse, this) != 0 ||
+        event_add(&mResponseEvent, &tv) != 0)
+    {
+        mdns_socket_close(socket);
+        return ERROR_UNKNOWN("setup socket event failed");
+    }
+
     mSocket = socket;
-
-exit:
-    if (error != Error::kNone)
-    {
-        if (socket >= 0)
-        {
-            mdns_socket_close(socket);
-        }
-    }
-    return error;
+    return ERROR_NONE;
 }
 
 void BorderAgentQuerier::SendQuery(ResponseHandler aHandler)
@@ -95,21 +86,21 @@ void BorderAgentQuerier::SendQuery(ResponseHandler aHandler)
     static const mdns_record_type_t kMdnsQueryType = MDNS_RECORDTYPE_PTR;
     static const char *             kServiceName   = "_meshcop._udp.local";
 
-    Error   error = Error::kNone;
+    Error error;
     uint8_t buf[kDefaultBufferSize];
 
-    VerifyOrExit(mSocket < 0, error = Error::kBusy);
+    VerifyOrExit (mSocket < 0, error = ERROR_BUSY("there are outstanding queries"));
     SuccessOrExit(error = Setup());
 
     if (mdns_query_send(mSocket, kMdnsQueryType, kServiceName, strlen(kServiceName), buf, sizeof(buf)) != 0)
     {
-        ExitNow(error = Error::kFailed);
+        ExitNow(error = ERROR_UNKNOWN("mdns send query failed"));
     }
 
     mResponseHandler = aHandler;
 
 exit:
-    if (error != Error::kNone)
+    if (!error.NoError())
     {
         aHandler(nullptr, error);
     }
@@ -129,7 +120,7 @@ void BorderAgentQuerier::ReceiveResponse(evutil_socket_t aSocket, short aFlags)
 
         if (mResponseHandler != nullptr)
         {
-            mResponseHandler(&mBorderAgents, Error::kNone);
+            mResponseHandler(&mBorderAgents, ERROR_NONE);
             mResponseHandler = nullptr;
         }
 
@@ -186,7 +177,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
                                      size_t                 offset,
                                      size_t                 length)
 {
-    Error                   error = Error::kNone;
+    Error                   error;
     struct sockaddr_storage fromAddrStorage;
     Address                 fromAddr;
     std::string             fromAddrStr;
@@ -195,7 +186,8 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
 
     *reinterpret_cast<struct sockaddr *>(&fromAddrStorage) = *from;
     SuccessOrExit(error = fromAddr.Set(fromAddrStorage));
-    SuccessOrExit(error = fromAddr.ToString(fromAddrStr));
+
+    fromAddrStr = fromAddr.ToString();
 
     entryType = (entry == MDNS_ENTRYTYPE_ANSWER) ? "answer"
                                                  : ((entry == MDNS_ENTRYTYPE_AUTHORITY) ? "authority" : "additional");
@@ -224,9 +216,8 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
 
         *reinterpret_cast<struct sockaddr_in *>(&addrStorage) = addr;
         SuccessOrExit(error = fromAddr.Set(addrStorage));
-        SuccessOrExit(error = fromAddr.ToString(addrStr));
 
-        LOG_INFO("[mDNS] received from {}: {} A={}", fromAddrStr, entryType, addrStr);
+        LOG_INFO("[mDNS] received from {}: {} A={}", fromAddrStr, entryType, fromAddr.ToString());
 
         // We prefer AAAA (IPv6) address than A (IPv4) address.
         if (!(mCurBorderAgent.mPresentFlags & BorderAgent::kAddrBit))
@@ -245,7 +236,8 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
 
         *reinterpret_cast<struct sockaddr_in6 *>(&addrStorage) = addr;
         SuccessOrExit(error = fromAddr.Set(addrStorage));
-        SuccessOrExit(error = fromAddr.ToString(addrStr));
+
+        addrStr = fromAddr.ToString();
 
         LOG_INFO("[mDNS] received from {}: {} AAAA={}", fromAddrStr, entryType, addrStr);
 
@@ -266,11 +258,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
 
             if (key == "rv")
             {
-                if (value != "1")
-                {
-                    LOG_ERROR("[mDNS] value of TXT Key 'rv' is not '1'");
-                    ExitNow(error = Error::kBadFormat);
-                }
+                VerifyOrExit(value == "1", error = ERROR_BAD_FORMAT("mDNS entry value of TXT Key 'rv' is not '1'"));
             }
             else if (key == "tv")
             {
@@ -280,10 +268,9 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "sb")
             {
                 ByteArray bitmap;
-                if (utils::Hex(bitmap, value) != Error::kNone || bitmap.size() != 4)
+                if (!utils::Hex(bitmap, value).NoError() || bitmap.size() != 4)
                 {
-                    LOG_ERROR("[mDNS] value of TXT Key 'sb' is invalid: {}", value);
-                    ExitNow(error = Error::kBadFormat);
+                    ExitNow(error = ERROR_BAD_FORMAT("[mDNS] value of TXT Key 'sb' is invalid: {}", value));
                 }
 
                 mCurBorderAgent.mState.mConnectionMode = (bitmap[0] >> 5);
@@ -301,7 +288,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "xp")
             {
                 ByteArray extendPanId;
-                if (utils::Hex(extendPanId, value) != Error::kNone || extendPanId.size() != 8)
+                if (!utils::Hex(extendPanId, value).NoError() || extendPanId.size() != 8)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'xp' is invalid: {}", value);
                 }
@@ -324,7 +311,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "at")
             {
                 ByteArray activeTimestamp;
-                if (utils::Hex(activeTimestamp, value) != Error::kNone || activeTimestamp.size() != 8)
+                if (!utils::Hex(activeTimestamp, value).NoError() || activeTimestamp.size() != 8)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'at' is invalid: {}", value);
                 }
@@ -337,7 +324,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "pt")
             {
                 ByteArray partitionId;
-                if (utils::Hex(partitionId, value) != Error::kNone || partitionId.size() != 4)
+                if (!utils::Hex(partitionId, value).NoError() || partitionId.size() != 4)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'pt' is invalid: {}", value);
                 }
@@ -355,7 +342,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "vo")
             {
                 ByteArray oui;
-                if (utils::Hex(oui, value) != Error::kNone || oui.size() != 3)
+                if (!utils::Hex(oui, value).NoError() || oui.size() != 3)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'vo' is invalid: {}", value);
                 }
@@ -373,7 +360,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "sq")
             {
                 ByteArray bbrSeqNum;
-                if (utils::Hex(bbrSeqNum, value) != Error::kNone || bbrSeqNum.size() != 1)
+                if (!utils::Hex(bbrSeqNum, value).NoError() || bbrSeqNum.size() != 1)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'vo' is invalid: {}", value);
                 }
@@ -386,7 +373,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
             else if (key == "bb")
             {
                 ByteArray bbrPort;
-                if (utils::Hex(bbrPort, value) != Error::kNone || bbrPort.size() != 2)
+                if (!utils::Hex(bbrPort, value).NoError() || bbrPort.size() != 2)
                 {
                     LOG_WARN("[mDNS] value of TXT Key 'vo' is invalid: {}", value);
                 }
@@ -409,7 +396,10 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
     }
 
 exit:
-    return error == Error::kNone ? 0 : -1;
+    if (!error.NoError()) {
+        LOG_ERROR(error.ToString());
+    }
+    return error.NoError() ? 0 : -1;
 }
 
 bool BorderAgentQuerier::ValidateBorderAgent(const BorderAgent &aBorderAgent)

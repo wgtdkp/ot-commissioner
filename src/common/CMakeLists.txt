@@ -28,8 +28,14 @@
 
 add_library(commissioner-common
     address.cpp
+    error_macros.hpp
     utils.cpp)
+
+target_link_libraries(commissioner-common
+    PRIVATE
+        fmt::fmt)
 
 target_include_directories(commissioner-common PUBLIC
     ${PROJECT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/third_party/fmtlib/repo/include)

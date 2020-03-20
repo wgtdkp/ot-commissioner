@@ -50,10 +50,12 @@
         }                                   \
     } while (false)
 
+#define ASSERT_SUCCESS(expr) ASSERT((expr).NoError())
+
 #define SuccessOrExit(aError)         \
     do                                \
     {                                 \
-        if ((aError) != Error::kNone) \
+        if (!(aError).NoError())      \
         {                             \
             goto exit;                \
         }                             \
@@ -75,6 +77,7 @@
         __VA_ARGS__; \
         goto exit;   \
     } while (false)
+
 
 namespace ot {
 
