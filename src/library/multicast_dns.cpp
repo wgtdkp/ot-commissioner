@@ -397,7 +397,7 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
 
 exit:
     if (!error.NoError()) {
-        LOG_ERROR(error.ToString());
+        Log(LogLevel::kError, error.ToString());
     }
     return error.NoError() ? 0 : -1;
 }

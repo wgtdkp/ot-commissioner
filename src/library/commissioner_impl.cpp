@@ -330,7 +330,7 @@ void CommissionerImpl::Petition(PetitionHandler aHandler, const std::string &aAd
 exit:
     if (!error.NoError())
     {
-        aHandler(error);
+        aHandler(nullptr, error);
     }
 }
 
