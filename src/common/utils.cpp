@@ -84,13 +84,15 @@ static inline uint8_t Hex(char c)
 
 Error Hex(ByteArray &aBuf, const std::string &aHexStr)
 {
-    if (aHexStr.size() % 2 != 0) {
+    if (aHexStr.size() % 2 != 0)
+    {
         return ERROR_INVALID_ARGS("{} is not a valid HEX string; must has even length", aHexStr);
     }
 
     for (size_t i = 0; i < aHexStr.size(); i += 2)
     {
-        if (!isxdigit(aHexStr[i]) || !isxdigit(aHexStr[i + 1])) {
+        if (!isxdigit(aHexStr[i]) || !isxdigit(aHexStr[i + 1]))
+        {
             return ERROR_INVALID_ARGS("{} is not a valid Hex string; there is non-HEX char", aHexStr);
         }
         aBuf.push_back((Hex(aHexStr[i]) << 4) | Hex(aHexStr[i + 1]));

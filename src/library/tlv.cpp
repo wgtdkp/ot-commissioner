@@ -151,13 +151,15 @@ TlvPtr Tlv::Deserialize(Error &aError, size_t &aOffset, const ByteArray &aBuf, S
     length = aBuf[offset++];
     if (length == kEscapeLength)
     {
-        VerifyOrExit(offset + 2 <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of Extended TLV(type={})", type));
+        VerifyOrExit(offset + 2 <= aBuf.size(),
+                     error = ERROR_BAD_FORMAT("premature end of Extended TLV(type={})", type));
 
         length = (aBuf[offset++] << 8) & 0xFF00;
         length |= (aBuf[offset++]) & 0x00FF;
     }
 
-    VerifyOrExit(offset + length <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of TLV(type={}, length={})", type, length));
+    VerifyOrExit(offset + length <= aBuf.size(),
+                 error = ERROR_BAD_FORMAT("premature end of TLV(type={}, length={})", type, length));
 
     tlv = std::make_shared<Tlv>(utils::from_underlying<Type>(type), aScope);
     tlv->SetValue(&aBuf[offset], length);

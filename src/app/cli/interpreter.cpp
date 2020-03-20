@@ -145,7 +145,7 @@ template <typename T> static Error ParseInteger(T &aInteger, const std::string &
     integer = strtoull(aStr.c_str(), &endPtr, 0);
 
     VerifyOrExit(endPtr != nullptr && endPtr > aStr.c_str(),
-        error = ERROR_INVALID_ARGS("{} is not a valid integer", aStr));
+                 error = ERROR_INVALID_ARGS("{} is not a valid integer", aStr));
 
     aInteger = integer;
 
@@ -228,7 +228,7 @@ void Interpreter::Print(const Value &aValue)
 {
     std::string output = aValue.ToString();
 
-    if(!output.empty())
+    if (!output.empty())
     {
         output += "\n";
     }
@@ -298,7 +298,7 @@ Interpreter::Expression Interpreter::ParseExpression(const std::string &aLiteral
 
 Interpreter::Value Interpreter::ProcessStart(const Expression &aExpr)
 {
-    Error error;
+    Error       error;
     uint16_t    port;
     std::string existingCommissionerId;
 
@@ -323,7 +323,7 @@ Interpreter::Value Interpreter::ProcessStop(const Expression &)
 
 Interpreter::Value Interpreter::ProcessActive(const Expression &)
 {
-    return std::string {mCommissioner->IsActive() ? "true" : "false"};
+    return std::string{mCommissioner->IsActive() ? "true" : "false"};
 }
 
 Interpreter::Value Interpreter::ProcessToken(const Expression &aExpr)
@@ -454,7 +454,7 @@ exit:
 
 Interpreter::Value Interpreter::ProcessJoiner(const Expression &aExpr)
 {
-    Value value;
+    Value      value;
     JoinerType type;
 
     VerifyOrExit(aExpr.size() >= 3, value = ERROR_INVALID_ARGS("too few arguments"));
@@ -466,7 +466,8 @@ Interpreter::Value Interpreter::ProcessJoiner(const Expression &aExpr)
         ByteArray   pskd;
         std::string provisioningUrl;
 
-        VerifyOrExit(aExpr.size() >= (type == JoinerType::kMeshCoP ? 5 : 4), value = ERROR_INVALID_ARGS("too few arguments"));
+        VerifyOrExit(aExpr.size() >= (type == JoinerType::kMeshCoP ? 5 : 4),
+                     value = ERROR_INVALID_ARGS("too few arguments"));
         SuccessOrExit(value = ParseInteger(eui64, aExpr[3]));
         if (type == JoinerType::kMeshCoP)
         {
@@ -559,7 +560,7 @@ exit:
 Interpreter::Value Interpreter::ProcessOpDataset(const Expression &aExpr)
 {
     Value value;
-    bool IsSet;
+    bool  IsSet;
 
     VerifyOrExit(aExpr.size() >= 3, value = ERROR_INVALID_ARGS("too few arguments"));
     if (CaseInsensitiveEqual(aExpr[1], "get"))
@@ -766,7 +767,7 @@ exit:
 Interpreter::Value Interpreter::ProcessBbrDataset(const Expression &aExpr)
 {
     Value value;
-    bool IsSet;
+    bool  IsSet;
 
     VerifyOrExit(aExpr.size() >= 2, value = ERROR_INVALID_ARGS("too few arguments"));
     if (CaseInsensitiveEqual(aExpr[1], "get"))
@@ -904,7 +905,8 @@ Interpreter::Value Interpreter::ProcessAnnounce(const Expression &aExpr)
     SuccessOrExit(value = ParseInteger(channelMask, aExpr[1]));
     SuccessOrExit(value = ParseInteger(count, aExpr[2]));
     SuccessOrExit(value = ParseInteger(period, aExpr[3]));
-    SuccessOrExit(value = mCommissioner->AnnounceBegin(channelMask, count, CommissionerApp::MilliSeconds(period), aExpr[4]));
+    SuccessOrExit(
+        value = mCommissioner->AnnounceBegin(channelMask, count, CommissionerApp::MilliSeconds(period), aExpr[4]));
 
 exit:
     return value;
@@ -932,7 +934,7 @@ Interpreter::Value Interpreter::ProcessPanId(const Expression &aExpr)
         VerifyOrExit(aExpr.size() >= 3, value = ERROR_INVALID_ARGS("too few arguments"));
         SuccessOrExit(value = ParseInteger(panId, aExpr[2]));
         conflict = mCommissioner->HasPanIdConflict(panId);
-        value = std::to_string(conflict);
+        value    = std::to_string(conflict);
     }
     else
     {
@@ -970,12 +972,12 @@ Interpreter::Value Interpreter::ProcessEnergy(const Expression &aExpr)
             Address             dstAddr;
             SuccessOrExit(value = dstAddr.Set(aExpr[2]));
             report = mCommissioner->GetEnergyReport(dstAddr);
-            value = report == nullptr ? "null" : EnergyReportToJson(*report);
+            value  = report == nullptr ? "null" : EnergyReportToJson(*report);
         }
         else
         {
             auto reports = mCommissioner->GetAllEnergyReports();
-            value = reports.empty() ? "null" : EnergyReportMapToJson(reports);
+            value        = reports.empty() ? "null" : EnergyReportMapToJson(reports);
         }
     }
     else
@@ -1055,7 +1057,8 @@ Error Interpreter::ParseChannelMask(ChannelMask &aChannelMask, const Expression 
 {
     Error error;
 
-    VerifyOrExit(aExpr.size() >= aIndex && ((aExpr.size() - aIndex) % 2 == 0), error = ERROR_INVALID_ARGS("too few arguments"));
+    VerifyOrExit(aExpr.size() >= aIndex && ((aExpr.size() - aIndex) % 2 == 0),
+                 error = ERROR_INVALID_ARGS("too few arguments"));
 
     for (size_t i = aIndex; i < aExpr.size(); i += 2)
     {

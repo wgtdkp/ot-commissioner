@@ -51,10 +51,9 @@ Error ProxyEndpoint::Send(const ByteArray &aRequest)
     ByteArray     udpPayload;
 
     VerifyOrExit(GetPeerAddr().IsValid() && GetPeerAddr().IsIpv6(),
-        error = ERROR_INVALID_STATE("no valid IPv6 peer address"));
+                 error = ERROR_INVALID_STATE("no valid IPv6 peer address"));
 
-    VerifyOrExit(mBrClient.IsConnected(),
-        error = ERROR_INVALID_STATE("not connected to the border agent"));
+    VerifyOrExit(mBrClient.IsConnected(), error = ERROR_INVALID_STATE("not connected to the border agent"));
 
     utils::Encode<uint16_t>(udpPayload, mBrClient.GetDtlsSession().GetLocalPort());
     utils::Encode<uint16_t>(udpPayload, GetPeerPort());
@@ -106,9 +105,9 @@ void ProxyClient::HandleUdpRx(const coap::Request &aUdpRx)
     tlv::TlvPtr udpEncap = nullptr;
 
     VerifyOrExit((srcAddr = GetTlv(tlv::Type::kIpv6Address, aUdpRx)) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid IPv6 Address TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid IPv6 Address TLV found"));
     VerifyOrExit((udpEncap = GetTlv(tlv::Type::kUdpEncapsulation, aUdpRx)) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid UDP Encapsulation TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid UDP Encapsulation TLV found"));
 
     SuccessOrExit(error = peerAddr.Set(srcAddr->GetValue()));
 

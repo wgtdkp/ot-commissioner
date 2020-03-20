@@ -78,8 +78,8 @@ public:
     static Address FromString(const std::string &aAddr);
 
 private:
-    static constexpr size_t kIpv4Size = 4;
-    static constexpr size_t kIpv6Size = 16;
+    static constexpr size_t  kIpv4Size        = 4;
+    static constexpr size_t  kIpv6Size        = 16;
     static constexpr uint8_t kMulticastPrefix = 0xFF;
 
     ByteArray mBytes;

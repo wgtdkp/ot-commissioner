@@ -67,10 +67,11 @@ Error Commissioner::GeneratePSKc(ByteArray &        aPSKc,
     VerifyOrExit((aPassphrase.size() >= kMinCommissionerPassphraseLength) &&
                      (aPassphrase.size() <= kMaxCommissionerPassPhraseLength),
                  error = ERROR_INVALID_ARGS("passphrase length={} exceeds range [{}, {}]", aPassphrase.size(),
-                     kMinCommissionerPassphraseLength, kMaxCommissionerPassPhraseLength));
+                                            kMinCommissionerPassphraseLength, kMaxCommissionerPassPhraseLength));
     VerifyOrExit(aNetworkName.size() <= kMaxNetworkNameLength,
-        error = ERROR_INVALID_ARGS("network name length={} > {}", aNetworkName.size(), kMaxNetworkNameLength));
-    VerifyOrExit(aExtendedPanId.size() == kExtendedPanIdLength,
+                 error = ERROR_INVALID_ARGS("network name length={} > {}", aNetworkName.size(), kMaxNetworkNameLength));
+    VerifyOrExit(
+        aExtendedPanId.size() == kExtendedPanIdLength,
         error = ERROR_INVALID_ARGS("extended PAN ID length={} != {}", aExtendedPanId.size(), kExtendedPanIdLength));
 
     salt.insert(salt.end(), saltPrefix.begin(), saltPrefix.end());
@@ -120,13 +121,14 @@ Error Commissioner::GetMeshLocalAddr(std::string &      aMeshLocalAddr,
                                      uint16_t           aLocator16)
 {
     static const size_t kThreadMeshLocalPrefixLength = 8;
-    Error     error;
-    ByteArray rawAddr;
-    Address   addr;
+    Error               error;
+    ByteArray           rawAddr;
+    Address             addr;
 
     SuccessOrExit(error = Ipv6PrefixFromString(rawAddr, aMeshLocalPrefix));
     VerifyOrExit(rawAddr.size() == kThreadMeshLocalPrefixLength,
-        error = ERROR_INVALID_ARGS("Thread Mesh local prefix length={} != {}", rawAddr.size(), kThreadMeshLocalPrefixLength));
+                 error = ERROR_INVALID_ARGS("Thread Mesh local prefix length={} != {}", rawAddr.size(),
+                                            kThreadMeshLocalPrefixLength));
 
     utils::Encode<uint16_t>(rawAddr, 0x0000);
     utils::Encode<uint16_t>(rawAddr, 0x00FF);
@@ -219,30 +221,38 @@ Error CommissionerImpl::ValidateConfig(const Config &aConfig)
     {
         tlv::Tlv commissionerIdTlv{tlv::Type::kCommissionerId, aConfig.mId};
         VerifyOrExit(!aConfig.mId.empty(), error = ERROR_INVALID_ARGS("commissioner ID is mandatory"));
-        VerifyOrExit(commissionerIdTlv.IsValid(), error = ERROR_INVALID_ARGS("{} is not a valid Commissioner ID", aConfig.mId));
+        VerifyOrExit(commissionerIdTlv.IsValid(),
+                     error = ERROR_INVALID_ARGS("{} is not a valid Commissioner ID", aConfig.mId));
     }
 
     VerifyOrExit(aConfig.mLogLevel <= LogLevel::kDebug,
-                 error = ERROR_INVALID_ARGS("{} is not a valid logging level", utils::to_underlying(aConfig.mLogLevel)));
+                 error =
+                     ERROR_INVALID_ARGS("{} is not a valid logging level", utils::to_underlying(aConfig.mLogLevel)));
 
     VerifyOrExit(
         (aConfig.mKeepAliveInterval >= kMinKeepAliveInterval && aConfig.mKeepAliveInterval <= kMaxKeepAliveInterval),
-        error =  ERROR_INVALID_ARGS("keep-alive internal {} exceeds range [{}, {}]", aConfig.mKeepAliveInterval, kMinKeepAliveInterval, kMaxKeepAliveInterval));
+        error = ERROR_INVALID_ARGS("keep-alive internal {} exceeds range [{}, {}]", aConfig.mKeepAliveInterval,
+                                   kMinKeepAliveInterval, kMaxKeepAliveInterval));
 
     if (aConfig.mEnableCcm)
     {
         tlv::Tlv domainNameTlv{tlv::Type::kDomainName, aConfig.mDomainName};
         VerifyOrExit(!aConfig.mDomainName.empty(), error = ERROR_INVALID_ARGS("missing Domain Name for CCM network"));
-        VerifyOrExit(domainNameTlv.IsValid(), error = ERROR_INVALID_ARGS("Domain Name is too long (length={})", aConfig.mDomainName.size()));
-        VerifyOrExit(!aConfig.mPrivateKey.empty(), error = ERROR_INVALID_ARGS("missing Private Key file for CCM network"));
-        VerifyOrExit(!aConfig.mCertificate.empty(), error = ERROR_INVALID_ARGS("missing Certificate file for CCM network"));
-        VerifyOrExit(!aConfig.mTrustAnchor.empty(), error = ERROR_INVALID_ARGS("missing Trust Anchor file for CCM network"));
+        VerifyOrExit(domainNameTlv.IsValid(),
+                     error = ERROR_INVALID_ARGS("Domain Name is too long (length={})", aConfig.mDomainName.size()));
+        VerifyOrExit(!aConfig.mPrivateKey.empty(),
+                     error = ERROR_INVALID_ARGS("missing Private Key file for CCM network"));
+        VerifyOrExit(!aConfig.mCertificate.empty(),
+                     error = ERROR_INVALID_ARGS("missing Certificate file for CCM network"));
+        VerifyOrExit(!aConfig.mTrustAnchor.empty(),
+                     error = ERROR_INVALID_ARGS("missing Trust Anchor file for CCM network"));
     }
     else
     {
         // Should we also enable setting PSKc from passphrase?
         VerifyOrExit(!aConfig.mPSKc.empty(), error = ERROR_INVALID_ARGS("missing PSKc for non-CCM network"));
-        VerifyOrExit(aConfig.mPSKc.size() <= kMaxPSKcLength, error = ERROR_INVALID_ARGS("PSKc is too long (length={})", aConfig.mPSKc.size()));
+        VerifyOrExit(aConfig.mPSKc.size() <= kMaxPSKcLength,
+                     error = ERROR_INVALID_ARGS("PSKc is too long (length={})", aConfig.mPSKc.size()));
     }
 
 exit:
@@ -416,7 +426,7 @@ void CommissionerImpl::GetCommissionerDataset(Handler<CommissionerDataset> aHand
         ASSERT(aResponse != nullptr);
 
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_COMM_GET.rsp message"));
+                     error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_COMM_GET.rsp message"));
 
         SuccessOrExit(error = DecodeCommissionerDataset(dataset, *aResponse));
 
@@ -459,7 +469,7 @@ void CommissionerImpl::SetCommissionerDataset(ErrorHandler aHandler, const Commi
 
     VerifyOrExit(aDataset.mPresentFlags != 0, error = ERROR_INVALID_ARGS("empty Commissioner Dataset"));
     VerifyOrExit((aDataset.mPresentFlags & CommissionerDataset::kSessionIdBit) == 0,
-        error = ERROR_INVALID_ARGS("trying to set Commissioner Session ID which is read-only"));
+                 error = ERROR_INVALID_ARGS("trying to set Commissioner Session ID which is read-only"));
     VerifyOrExit((aDataset.mPresentFlags & CommissionerDataset::kBorderAgentLocatorBit) == 0,
                  error = ERROR_INVALID_ARGS("trying to set Border Agent Locator which is read-only"));
 
@@ -498,7 +508,7 @@ void CommissionerImpl::SetBbrDataset(ErrorHandler aHandler, const BbrDataset &aD
 
     VerifyOrExit(IsCcmMode(), error = ERROR_INVALID_STATE("sending MGMT_BBR_SET.req is only valid in CCM mode"));
     VerifyOrExit((aDataset.mPresentFlags & BbrDataset::kRegistrarIpv6AddrBit) == 0,
-        error = ERROR_INVALID_ARGS("trying to set Registrar IPv6 Address which is read-only"));
+                 error = ERROR_INVALID_ARGS("trying to set Registrar IPv6 Address which is read-only"));
 
     SuccessOrExit(error = request.SetUriPath(uri::kMgmtBbrSet));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kCommissionerSessionId, GetSessionId()}));
@@ -533,7 +543,7 @@ void CommissionerImpl::GetBbrDataset(Handler<BbrDataset> aHandler, uint16_t aDat
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_BBR_GET.rsp message"));
+                     error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_BBR_GET.rsp message"));
 
         SuccessOrExit(error = DecodeBbrDataset(dataset, *aResponse));
 
@@ -578,11 +588,11 @@ void CommissionerImpl::GetActiveDataset(Handler<ActiveOperationalDataset> aHandl
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_ACTIVE_GET.rsp message"));
+                     error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_ACTIVE_GET.rsp message"));
 
         SuccessOrExit(error = DecodeActiveOperationalDataset(dataset, *aResponse));
         VerifyOrExit(dataset.mPresentFlags & ActiveOperationalDataset::kActiveTimestampBit,
-            error = ERROR_BAD_FORMAT("Active Timestamp is not included in MGMT_ACTIVE_GET.rsp"));
+                     error = ERROR_BAD_FORMAT("Active Timestamp is not included in MGMT_ACTIVE_GET.rsp"));
 
         aHandler(&dataset, error);
 
@@ -625,21 +635,21 @@ void CommissionerImpl::SetActiveDataset(ErrorHandler aHandler, const ActiveOpera
     };
 
     VerifyOrExit(aDataset.mPresentFlags & ActiveOperationalDataset::kActiveTimestampBit,
-        error = ERROR_INVALID_ARGS("Active Timestamp is mandatory for an Active Operational Dataset"));
+                 error = ERROR_INVALID_ARGS("Active Timestamp is mandatory for an Active Operational Dataset"));
 
     // TLVs affect connectivity are not allowed.
     VerifyOrExit((aDataset.mPresentFlags & ActiveOperationalDataset::kChannelBit) == 0,
-        error = ERROR_INVALID_ARGS("Channel cannot be set with Active Operational Dataset, "
-                                   "try setting with Pending Operational Dataset instead"));
+                 error = ERROR_INVALID_ARGS("Channel cannot be set with Active Operational Dataset, "
+                                            "try setting with Pending Operational Dataset instead"));
     VerifyOrExit((aDataset.mPresentFlags & ActiveOperationalDataset::kPanIdBit) == 0,
-        error = ERROR_INVALID_ARGS("PAN ID cannot be set with Active Operational Dataset, "
-                                   "try setting with Pending Operational Dataset instead"));
+                 error = ERROR_INVALID_ARGS("PAN ID cannot be set with Active Operational Dataset, "
+                                            "try setting with Pending Operational Dataset instead"));
     VerifyOrExit((aDataset.mPresentFlags & ActiveOperationalDataset::kMeshLocalPrefixBit) == 0,
-        error = ERROR_INVALID_ARGS("Mesh-local Prefix cannot be set with Active Operational Dataset, "
-                                   "try setting with Pending Operational Dataset instead"));
+                 error = ERROR_INVALID_ARGS("Mesh-local Prefix cannot be set with Active Operational Dataset, "
+                                            "try setting with Pending Operational Dataset instead"));
     VerifyOrExit((aDataset.mPresentFlags & ActiveOperationalDataset::kNetworkMasterKeyBit) == 0,
-        error = ERROR_INVALID_ARGS("Network Master Key cannot be set with Active Operational Dataset, "
-                                   "try setting with Pending Operational Dataset instead"));
+                 error = ERROR_INVALID_ARGS("Network Master Key cannot be set with Active Operational Dataset, "
+                                            "try setting with Pending Operational Dataset instead"));
 
     SuccessOrExit(error = request.SetUriPath(uri::kMgmtActiveSet));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kCommissionerSessionId, GetSessionId()}));
@@ -673,15 +683,15 @@ void CommissionerImpl::GetPendingDataset(Handler<PendingOperationalDataset> aHan
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_PENDING_GET.rsp message"));
+                     error = ERROR_BAD_FORMAT("expect CoAP::CHANGED for MGMT_PENDING_GET.rsp message"));
 
         SuccessOrExit(error = DecodePendingOperationalDataset(dataset, *aResponse));
         VerifyOrExit(dataset.mPresentFlags | PendingOperationalDataset::kActiveTimestampBit,
-            error = ERROR_BAD_FORMAT("Active Timestamp is not included in MGMT_PENDING_GET.rsp"));
+                     error = ERROR_BAD_FORMAT("Active Timestamp is not included in MGMT_PENDING_GET.rsp"));
         VerifyOrExit(dataset.mPresentFlags | PendingOperationalDataset::kPendingTimestampBit,
-            error = ERROR_BAD_FORMAT("Pending Timestamp is not included in MGMT_PENDING_GET.rsp"));
+                     error = ERROR_BAD_FORMAT("Pending Timestamp is not included in MGMT_PENDING_GET.rsp"));
         VerifyOrExit(dataset.mPresentFlags | PendingOperationalDataset::kDelayTimerBit,
-            error = ERROR_BAD_FORMAT("Delay Timer is not included in MGMT_PENDING_GET.rsp"));
+                     error = ERROR_BAD_FORMAT("Delay Timer is not included in MGMT_PENDING_GET.rsp"));
 
         aHandler(&dataset, error);
 
@@ -724,12 +734,12 @@ void CommissionerImpl::SetPendingDataset(ErrorHandler aHandler, const PendingOpe
     };
 
     VerifyOrExit(aDataset.mPresentFlags & PendingOperationalDataset::kActiveTimestampBit,
-        error = ERROR_INVALID_ARGS("Active Timestamp is mandatory for a Pending Operational Dataset"));
+                 error = ERROR_INVALID_ARGS("Active Timestamp is mandatory for a Pending Operational Dataset"));
 
     VerifyOrExit(aDataset.mPresentFlags & PendingOperationalDataset::kPendingTimestampBit,
-        error = ERROR_INVALID_ARGS("Pending Timestamp is mandatory for a Pending Operational Dataset"));
+                 error = ERROR_INVALID_ARGS("Pending Timestamp is mandatory for a Pending Operational Dataset"));
     VerifyOrExit(aDataset.mPresentFlags & PendingOperationalDataset::kDelayTimerBit,
-        error = ERROR_INVALID_ARGS("Delay Timer is mandatory for a Pending Operational Dataset"));
+                 error = ERROR_INVALID_ARGS("Delay Timer is mandatory for a Pending Operational Dataset"));
 
     SuccessOrExit(error = request.SetUriPath(uri::kMgmtPendingSet));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kCommissionerSessionId, GetSessionId()}));
@@ -766,11 +776,12 @@ void CommissionerImpl::SetSecurePendingDataset(ErrorHandler                     
         aHandler(HandleStateResponse(aResponse, aError));
     };
 
-    VerifyOrExit(IsCcmMode(), error = ERROR_INVALID_STATE("sending MGMT_SEC_PENDING_SET.req is only valid in CCM mode"));
+    VerifyOrExit(IsCcmMode(),
+                 error = ERROR_INVALID_STATE("sending MGMT_SEC_PENDING_SET.req is only valid in CCM mode"));
 
     // Delay timer is mandatory.
     VerifyOrExit(aDataset.mPresentFlags & PendingOperationalDataset::kDelayTimerBit,
-        error = ERROR_INVALID_ARGS("Delay Timer is mandatory for a Secure Pending Operational Dataset"));
+                 error = ERROR_INVALID_ARGS("Delay Timer is mandatory for a Secure Pending Operational Dataset"));
 
     SuccessOrExit(error = dstAddr.Set(aPbbrAddr));
 
@@ -819,20 +830,20 @@ void CommissionerImpl::CommandMigrate(ErrorHandler       aHandler,
     coap::Request request{coap::Type::kConfirmable, coap::Code::kPost};
 
     auto onResponse = [aHandler](const coap::Response *aResponse, Error aError) {
-        Error       error;
+        Error error;
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                     error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
         if (!aResponse->GetPayload().empty())
         {
             auto stateTlv = GetTlv(tlv::Type::kState, *aResponse);
             VerifyOrExit(stateTlv != nullptr, error = ERROR_BAD_FORMAT("no valid State TLV found in response"));
             VerifyOrExit(stateTlv->GetValueAsInt8() == tlv::kStateAccept,
-                error = ERROR_REJECTED("request was rejected by peer"));
+                         error = ERROR_REJECTED("request was rejected by peer"));
         }
 
     exit:
@@ -843,7 +854,8 @@ void CommissionerImpl::CommandMigrate(ErrorHandler       aHandler,
 
     SuccessOrExit(error = dstAddr.Set(aDstAddr));
     VerifyOrExit(aDstNetworkName.size() <= kMaxNetworkNameLength,
-        error = ERROR_INVALID_ARGS("Network Name length={} > {}", aDstNetworkName.size(), kMaxNetworkNameLength));
+                 error =
+                     ERROR_INVALID_ARGS("Network Name length={} > {}", aDstNetworkName.size(), kMaxNetworkNameLength));
 
     SuccessOrExit(error = request.SetUriPath(uri::kMgmtNetMigrate));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kCommissionerSessionId, GetSessionId()}));
@@ -884,9 +896,9 @@ void CommissionerImpl::RegisterMulticastListener(Handler<uint8_t>               
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                     error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
         statusTlv = GetTlv(tlv::Type::kThreadStatus, *aResponse, tlv::Scope::kThread);
         VerifyOrExit(statusTlv != nullptr, error = ERROR_BAD_FORMAT("no valid State TLV found in response"));
@@ -950,9 +962,9 @@ void CommissionerImpl::AnnounceBegin(ErrorHandler       aHandler,
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                     error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
     exit:
         aHandler(error);
@@ -1001,9 +1013,9 @@ void CommissionerImpl::PanIdQuery(ErrorHandler       aHandler,
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                     error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
     exit:
         aHandler(error);
@@ -1053,9 +1065,9 @@ void CommissionerImpl::EnergyScan(ErrorHandler       aHandler,
 
         SuccessOrExit(error = aError);
         VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                     error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
     exit:
         aHandler(error);
@@ -1145,7 +1157,7 @@ void CommissionerImpl::SendPetition(PetitionHandler aHandler)
         SuccessOrExit(error = aError);
 
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
 
         SuccessOrExit(error = GetTlvSet(tlvSet, *aResponse));
 
@@ -1162,10 +1174,11 @@ void CommissionerImpl::SendPetition(PetitionHandler aHandler)
         }
 
         sessionIdTlv = tlvSet[tlv::Type::kCommissionerSessionId];
-        VerifyOrExit(sessionIdTlv != nullptr, error = ERROR_BAD_FORMAT("no valid Commissioner Session TLV found in response"));
+        VerifyOrExit(sessionIdTlv != nullptr,
+                     error = ERROR_BAD_FORMAT("no valid Commissioner Session TLV found in response"));
 
         mSessionId = sessionIdTlv->GetValueAsUint16();
-        mState = State::kActive;
+        mState     = State::kActive;
         mKeepAliveTimer.Start(GetKeepAliveInterval());
 
         LOG_INFO("petition succeed, start keep-alive timer with {} seconds", GetKeepAliveInterval().count() / 1000);
@@ -1178,7 +1191,8 @@ void CommissionerImpl::SendPetition(PetitionHandler aHandler)
         aHandler(existingCommissionerId.empty() ? nullptr : &existingCommissionerId, error);
     };
 
-    VerifyOrExit(mState == State::kDisabled, error = ERROR_INVALID_STATE("cannot petition when the commissioner is running"));
+    VerifyOrExit(mState == State::kDisabled,
+                 error = ERROR_INVALID_STATE("cannot petition when the commissioner is running"));
 
     SuccessOrExit(error = request.SetUriPath(uri::kPetitioning));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kCommissionerId, mConfig.mId}));
@@ -1225,7 +1239,8 @@ void CommissionerImpl::SendKeepAlive(Timer &, bool aKeepAlive)
         return;
     };
 
-    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("cannot send keep-alive message the commissioner is not active"));
+    VerifyOrExit(IsActive(),
+                 error = ERROR_INVALID_STATE("cannot send keep-alive message the commissioner is not active"));
 
     SuccessOrExit(error = request.SetUriPath(uri::kKeepAlive));
     SuccessOrExit(error = AppendTlv(request, {tlv::Type::kState, state}));
@@ -1270,7 +1285,8 @@ Error AppendTlv(coap::Message &aMessage, const tlv::Tlv &aTlv)
     Error     error;
     ByteArray buf;
 
-    VerifyOrExit(aTlv.IsValid(), error = ERROR_INVALID_ARGS("the tlv(type={}) is in bad format", utils::to_underlying(aTlv.GetType())));
+    VerifyOrExit(aTlv.IsValid(),
+                 error = ERROR_INVALID_ARGS("the tlv(type={}) is in bad format", utils::to_underlying(aTlv.GetType())));
 
     aTlv.Serialize(buf);
     aMessage.Append(buf);
@@ -1296,13 +1312,13 @@ Error CommissionerImpl::HandleStateResponse(const coap::Response *aResponse, Err
 
     SuccessOrExit(error = aError);
     VerifyOrExit(aResponse->GetCode() != coap::Code::kUnauthorized,
-            error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
+                 error = ERROR_SECURITY("response code is CoAP::UNAUTHORIZED"));
     VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-        error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                 error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
     VerifyOrExit((stateTlv = GetTlv(tlv::Type::kState, *aResponse)) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid State TLV found in response"));
+                 error = ERROR_BAD_FORMAT("no valid State TLV found in response"));
     VerifyOrExit(stateTlv->GetValueAsInt8() == tlv::kStateAccept,
-        error = ERROR_REJECTED("the request was rejected by peer"));
+                 error = ERROR_REJECTED("the request was rejected by peer"));
 
 exit:
     return error;
@@ -1619,7 +1635,7 @@ Error CommissionerImpl::EncodeChannelMask(ByteArray &aBuf, const ChannelMask &aC
     for (const auto &entry : aChannelMask)
     {
         VerifyOrExit(entry.mMasks.size() < tlv::kEscapeLength,
-            error = ERROR_INVALID_ARGS("Channel Mask list is tool long (>={})", tlv::kEscapeLength));
+                     error = ERROR_INVALID_ARGS("Channel Mask list is tool long (>={})", tlv::kEscapeLength));
 
         utils::Encode(aBuf, entry.mPage);
         utils::Encode(aBuf, static_cast<uint8_t>(entry.mMasks.size()));
@@ -1656,7 +1672,7 @@ Error CommissionerImpl::DecodeBbrDataset(BbrDataset &aDataset, const coap::Respo
 
         SuccessOrExit(error = addr.Set(registrarIpv6Addr->GetValue()));
 
-        dataset.mRegistrarIpv6Addr= addr.ToString();
+        dataset.mRegistrarIpv6Addr = addr.ToString();
         dataset.mPresentFlags |= BbrDataset::kRegistrarIpv6AddrBit;
     }
 
@@ -2036,23 +2052,23 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
     SuccessOrExit(error = GetTlvSet(tlvSet, aRlyRx));
 
     VerifyOrExit((tlv = tlvSet[tlv::Type::kJoinerUdpPort]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Joiner UDP Port TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Joiner UDP Port TLV found"));
     joinerUdpPort = tlv->GetValueAsUint16();
 
     VerifyOrExit((tlv = tlvSet[tlv::Type::kJoinerRouterLocator]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Joiner Router Locator TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Joiner Router Locator TLV found"));
     joinerRouterLocator = tlv->GetValueAsUint16();
 
     VerifyOrExit((tlv = tlvSet[tlv::Type::kJoinerIID]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Joiner IID TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Joiner IID TLV found"));
     joinerIid = tlv->GetValue();
 
     VerifyOrExit((tlv = tlvSet[tlv::Type::kJoinerDtlsEncapsulation]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Joiner DTLS Encapsulation TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Joiner DTLS Encapsulation TLV found"));
     dtlsRecords = tlv->GetValue();
 
-    LOG_DEBUG("received RLY_RX.ntf: joinerIID={}, joinerRouterLocator={}, dtlsMessageLength={}",
-        utils::Hex(joinerIid), joinerRouterLocator, dtlsRecords.size());
+    LOG_DEBUG("received RLY_RX.ntf: joinerIID={}, joinerRouterLocator={}, dtlsMessageLength={}", utils::Hex(joinerIid),
+              joinerRouterLocator, dtlsRecords.size());
 
     if (mJoinerInfoRequester == nullptr)
     {

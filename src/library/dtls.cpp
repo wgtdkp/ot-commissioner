@@ -143,7 +143,9 @@ Error DtlsSession::Init(const DtlsConfig &aConfig)
 {
     Error error;
 
-    if (int fail = mbedtls_ssl_config_defaults(&mConfig, mIsServer, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) {
+    if (int fail = mbedtls_ssl_config_defaults(&mConfig, mIsServer, MBEDTLS_SSL_TRANSPORT_DATAGRAM,
+                                               MBEDTLS_SSL_PRESET_DEFAULT))
+    {
         ExitNow(error = ErrorFromMbedtlsError(fail));
     }
 
@@ -242,7 +244,8 @@ Error DtlsSession::Init(const DtlsConfig &aConfig)
     {
         if (int fail = mbedtls_ssl_set_hs_ecjpake_password(&mSsl, aConfig.mPSK.data(), aConfig.mPSK.size()))
         {
-            ExitNow(error = ERROR_SECURITY("set DTLS pre-shared key failed; {}", ErrorFromMbedtlsError(fail).GetMessage()));
+            ExitNow(error =
+                        ERROR_SECURITY("set DTLS pre-shared key failed; {}", ErrorFromMbedtlsError(fail).GetMessage()));
         }
     }
 
@@ -252,7 +255,8 @@ exit:
 
 void DtlsSession::Reset()
 {
-    if (mState != State::kConnecting && mState != State::kConnected && mState != State::kDisconnected) {
+    if (mState != State::kConnecting && mState != State::kConnected && mState != State::kDisconnected)
+    {
         return;
     }
 
@@ -413,8 +417,7 @@ exit:
 
 bool DtlsSession::ShouldStop(Error aError)
 {
-    return aError.GetCode() != ErrorCode::kNone &&
-           aError.GetCode() != ErrorCode::kBusy &&
+    return aError.GetCode() != ErrorCode::kNone && aError.GetCode() != ErrorCode::kBusy &&
            aError.GetCode() != ErrorCode::kIOBusy;
 }
 
@@ -459,7 +462,7 @@ exit:
 
 Error DtlsSession::Write(const ByteArray &aBuf)
 {
-    int   rval  = 0;
+    int   rval = 0;
     Error error;
 
     VerifyOrExit(mState == State::kConnected, error = ERROR_INVALID_STATE("the DTLS session is not connected"));
@@ -469,7 +472,7 @@ Error DtlsSession::Write(const ByteArray &aBuf)
     if (rval >= 0)
     {
         VerifyOrExit(static_cast<size_t>(rval) == aBuf.size(),
-            error = ERROR_IO_BUSY("written {} bytes of total length {}", rval, aBuf.size()));
+                     error = ERROR_IO_BUSY("written {} bytes of total length {}", rval, aBuf.size()));
 
         LOG_DEBUG("DTLS successfully write data: {}", utils::Hex(aBuf));
     }
@@ -502,7 +505,7 @@ Error DtlsSession::TryWrite()
 
 Error DtlsSession::Handshake()
 {
-    int   rval  = 0;
+    int   rval = 0;
     Error error;
 
     VerifyOrExit(mState == State::kConnecting);

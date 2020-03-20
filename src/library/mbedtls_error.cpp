@@ -58,7 +58,7 @@ Error ErrorFromMbedtlsError(int aMbedtlsError)
     static constexpr int kMbedtlsErrorHighLevelModuleIdOffset = 12;
     static constexpr int kMbedtlsErrorHighLevelModuleIdCipher = 6;
     static constexpr int kMbedtlsErrorHighLevelModuleIdSsl    = 7;
-    static constexpr int kMbedtlsErrorMsgMaxLength = 256;
+    static constexpr int kMbedtlsErrorMsgMaxLength            = 256;
 
     ASSERT(aMbedtlsError <= 0);
 
@@ -74,7 +74,8 @@ Error ErrorFromMbedtlsError(int aMbedtlsError)
     else if (aMbedtlsError == MBEDTLS_ERR_SSL_WANT_READ || aMbedtlsError == MBEDTLS_ERR_SSL_WANT_WRITE ||
              aMbedtlsError == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS || aMbedtlsError == MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS)
     {
-        errorCode = ErrorCode::kIOBusy;;
+        errorCode = ErrorCode::kIOBusy;
+        ;
     }
     else if (aMbedtlsError >= kMbedtlsErrorLowLevelNetBegin && aMbedtlsError <= kMbedtlsErrorLowLevelNetEnd)
     {
@@ -92,7 +93,7 @@ Error ErrorFromMbedtlsError(int aMbedtlsError)
         errorCode = ErrorCode::kUnknown;
     }
 
-    char mbedtlsErrorMsg[kMbedtlsErrorMsgMaxLength+1];
+    char mbedtlsErrorMsg[kMbedtlsErrorMsgMaxLength + 1];
     mbedtls_strerror(aMbedtlsError, mbedtlsErrorMsg, sizeof(mbedtlsErrorMsg));
 
     return errorCode == ErrorCode::kNone ? ERROR_NONE : Error{errorCode, mbedtlsErrorMsg};

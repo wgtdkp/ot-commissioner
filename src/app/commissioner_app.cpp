@@ -70,7 +70,7 @@ static bool DefaultCommissioningHandler(const JoinerInfo & aJoinerInfo,
     return true;
 }
 
-Error CommissionerApp::Create(std::shared_ptr<CommissionerApp>& aCommApp, const std::string &aConfigFile)
+Error CommissionerApp::Create(std::shared_ptr<CommissionerApp> &aCommApp, const std::string &aConfigFile)
 {
     Error     error;
     AppConfig appConfig;
@@ -260,13 +260,13 @@ Error CommissionerApp::GetSteeringData(ByteArray &aSteeringData, JoinerType aJoi
     {
     case JoinerType::kMeshCoP:
         VerifyOrExit((mCommDataset.mPresentFlags & CommissionerDataset::kSteeringDataBit),
-            error = ERROR_NOT_FOUND("cannot find Thread 1.1 joiner Steering Data"));
+                     error = ERROR_NOT_FOUND("cannot find Thread 1.1 joiner Steering Data"));
         aSteeringData = mCommDataset.mSteeringData;
         break;
 
     case JoinerType::kAE:
         VerifyOrExit((mCommDataset.mPresentFlags & CommissionerDataset::kAeSteeringDataBit),
-            error = ERROR_NOT_FOUND("cannot find Thread CCM AE Steering Data"));
+                     error = ERROR_NOT_FOUND("cannot find Thread CCM AE Steering Data"));
         aSteeringData = mCommDataset.mAeSteeringData;
         break;
 
@@ -296,7 +296,8 @@ Error CommissionerApp::EnableJoiner(JoinerType         aType,
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mJoiners.count({aType, joinerId}) == 0,
-        error = ERROR_ALREADY_EXISTS("joiner(type={}, eui64={:X}) has already been enabled", utils::to_underlying(aType), aEui64));
+                 error = ERROR_ALREADY_EXISTS("joiner(type={}, eui64={:X}) has already been enabled",
+                                              utils::to_underlying(aType), aEui64));
 
     Commissioner::AddJoiner(steeringData, joinerId);
     SuccessOrExit(error = mCommissioner->SetCommissionerDataset(commDataset));
@@ -408,19 +409,19 @@ Error CommissionerApp::GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJo
     {
     case JoinerType::kMeshCoP:
         VerifyOrExit(mCommDataset.mPresentFlags & CommissionerDataset::kJoinerUdpPortBit,
-            error = ERROR_NOT_FOUND("cannot find Thread 1.1 Joiner UDP Port"));
+                     error = ERROR_NOT_FOUND("cannot find Thread 1.1 Joiner UDP Port"));
         aJoinerUdpPort = mCommDataset.mJoinerUdpPort;
         break;
 
     case JoinerType::kAE:
         VerifyOrExit(mCommDataset.mPresentFlags & CommissionerDataset::kAeUdpPortBit,
-            error = ERROR_NOT_FOUND("cannot find Thread CCM AE UDP Port"));
+                     error = ERROR_NOT_FOUND("cannot find Thread CCM AE UDP Port"));
         aJoinerUdpPort = mCommDataset.mAeUdpPort;
         break;
 
     case JoinerType::kNMKP:
         VerifyOrExit(mCommDataset.mPresentFlags & CommissionerDataset::kNmkpUdpPortBit,
-            error = ERROR_NOT_FOUND("cannot find Thread CCM NMKP Port"));
+                     error = ERROR_NOT_FOUND("cannot find Thread CCM NMKP Port"));
         aJoinerUdpPort = mCommDataset.mNmkpUdpPort;
         break;
     }
@@ -528,7 +529,7 @@ Error CommissionerApp::GetChannelMask(ChannelMask &aChannelMask) const
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kChannelMaskBit,
-        error = ERROR_NOT_FOUND("cannot find valid Channel Masks in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Channel Masks in Active Operational Dataset"));
     aChannelMask = mActiveDataset.mChannelMask;
 
 exit:
@@ -560,7 +561,7 @@ Error CommissionerApp::GetExtendedPanId(ByteArray &aExtendedPanId) const
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kExtendedPanIdBit,
-        error = ERROR_NOT_FOUND("cannot find valid Extended PAN ID in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Extended PAN ID in Active Operational Dataset"));
     aExtendedPanId = mActiveDataset.mExtendedPanId;
 
 exit:
@@ -626,7 +627,8 @@ Error CommissionerApp::GetNetworkMasterKey(ByteArray &aMasterKey)
 {
     Error error;
 
-    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));;
+    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
+    ;
 
     SuccessOrExit(error = mCommissioner->GetActiveDataset(mActiveDataset, 0xFFFF));
 
@@ -666,7 +668,7 @@ Error CommissionerApp::GetNetworkName(std::string &aNetworkName) const
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kNetworkNameBit,
-        error = ERROR_NOT_FOUND("cannot find valid Network Name in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Network Name in Active Operational Dataset"));
     aNetworkName = mActiveDataset.mNetworkName;
 
 exit:
@@ -700,7 +702,7 @@ Error CommissionerApp::GetPanId(uint16_t &aPanId)
     SuccessOrExit(error = mCommissioner->GetActiveDataset(mActiveDataset, 0xFFFF));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kPanIdBit,
-        error = ERROR_NOT_FOUND("cannot find valid PAN ID in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid PAN ID in Active Operational Dataset"));
     aPanId = mActiveDataset.mPanId;
 
 exit:
@@ -735,7 +737,7 @@ Error CommissionerApp::GetPSKc(ByteArray &aPSKc) const
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kPSKcBit,
-        error = ERROR_NOT_FOUND("cannot find valid PSKc in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid PSKc in Active Operational Dataset"));
     aPSKc = mActiveDataset.mPSKc;
 
 exit:
@@ -767,7 +769,7 @@ Error CommissionerApp::GetSecurityPolicy(SecurityPolicy &aSecurityPolicy) const
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
     VerifyOrExit(mActiveDataset.mPresentFlags & ActiveOperationalDataset::kSecurityPolicyBit,
-        error = ERROR_NOT_FOUND("cannot find valid Security Policy in Active Operational Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Security Policy in Active Operational Dataset"));
     aSecurityPolicy = mActiveDataset.mSecurityPolicy;
 
 exit:
@@ -844,7 +846,7 @@ Error CommissionerApp::GetTriHostname(std::string &aHostname) const
     VerifyOrExit(IsCcmMode(), error = ERROR_INVALID_STATE("the commissioner is not in CCM Mode"));
 
     VerifyOrExit(mBbrDataset.mPresentFlags & BbrDataset::kTriHostnameBit,
-        error = ERROR_NOT_FOUND("cannot find valid TRI Hostname in BBR Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid TRI Hostname in BBR Dataset"));
     aHostname = mBbrDataset.mTriHostname;
 
 exit:
@@ -878,7 +880,7 @@ Error CommissionerApp::GetRegistrarHostname(std::string &aHostname) const
     VerifyOrExit(IsCcmMode(), error = ERROR_INVALID_STATE("the commissioner is not in CCM Mode"));
 
     VerifyOrExit(mBbrDataset.mPresentFlags & BbrDataset::kRegistrarHostnameBit,
-        error = ERROR_NOT_FOUND("cannot find valid Registrar Hostname in BBR Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Registrar Hostname in BBR Dataset"));
     aHostname = mBbrDataset.mRegistrarHostname;
 
 exit:
@@ -912,7 +914,7 @@ Error CommissionerApp::GetRegistrarIpv6Addr(std::string &aIpv6Addr) const
     VerifyOrExit(IsCcmMode(), error = ERROR_INVALID_STATE("the commissioner is not in CCM Mode"));
 
     VerifyOrExit(mBbrDataset.mPresentFlags & BbrDataset::kRegistrarIpv6AddrBit,
-        error = ERROR_NOT_FOUND("cannot find valid Registrar IPv6 Address in BBR Dataset"));
+                 error = ERROR_NOT_FOUND("cannot find valid Registrar IPv6 Address in BBR Dataset"));
     aIpv6Addr = mBbrDataset.mRegistrarIpv6Addr;
 
 exit:
@@ -991,7 +993,8 @@ Error CommissionerApp::RegisterMulticastListener(const std::vector<std::string> 
     SuccessOrExit(error = GetPrimaryBbrAddr(pbbrAddr));
     SuccessOrExit(error =
                       mCommissioner->RegisterMulticastListener(status, pbbrAddr, aMulticastAddrList, aTimeout.count()));
-    VerifyOrExit(status == kMlrStatusSuccess, error = ERROR_REJECTED("request was rejected with statusCode={}", status));
+    VerifyOrExit(status == kMlrStatusSuccess,
+                 error = ERROR_REJECTED("request was rejected with statusCode={}", status));
 
 exit:
     return error;

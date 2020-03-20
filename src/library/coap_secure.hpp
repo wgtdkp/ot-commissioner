@@ -65,7 +65,8 @@ public:
 
         if (int fail = mSocket->Bind(aLocalAddr, aLocalPort))
         {
-            ExitNow(error = ERROR_IO_ERROR("bind socket to local addr={}, port={} failed: {}", aLocalAddr, aLocalPort, fail));
+            ExitNow(error = ERROR_IO_ERROR("bind socket to local addr={}, port={} failed: {}", aLocalAddr, aLocalPort,
+                                           fail));
         }
         mDtlsSession.Connect(aOnConnected);
 
@@ -79,7 +80,8 @@ public:
         {
             if (aOnConnected != nullptr)
             {
-                aOnConnected(mDtlsSession, ERROR_IO_ERROR("connect socket to peer addr={}, port={} failed: {}", aPeerAddr, aPeerPort, fail));
+                aOnConnected(mDtlsSession, ERROR_IO_ERROR("connect socket to peer addr={}, port={} failed: {}",
+                                                          aPeerAddr, aPeerPort, fail));
                 ExitNow();
             }
         }

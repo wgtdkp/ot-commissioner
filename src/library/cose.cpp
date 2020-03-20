@@ -80,13 +80,16 @@ Error Sign1Message::Serialize(ByteArray &aBuf)
 
 Error Sign1Message::Deserialize(Sign1Message &aCose, const ByteArray &aBuf)
 {
-    if (aBuf.empty()) {
+    if (aBuf.empty())
+    {
         return ERROR_INVALID_ARGS("COSE SIGN1 message must not be empty");
     }
 
     int         type;
-    HCOSE_SIGN0 sign = reinterpret_cast<HCOSE_SIGN0>(COSE_Decode(aBuf.data(), aBuf.size(), &type, COSE_sign0_object, nullptr));
-    if (sign == nullptr || type != COSE_sign0_object) {
+    HCOSE_SIGN0 sign =
+        reinterpret_cast<HCOSE_SIGN0>(COSE_Decode(aBuf.data(), aBuf.size(), &type, COSE_sign0_object, nullptr));
+    if (sign == nullptr || type != COSE_sign0_object)
+    {
         return ERROR_BAD_FORMAT("deserialize COSE SIGN1 message");
     }
 
@@ -96,7 +99,8 @@ Error Sign1Message::Deserialize(Sign1Message &aCose, const ByteArray &aBuf)
 
 Error Sign1Message::Validate(const CborMap &aCborPublicKey)
 {
-    if(!aCborPublicKey.IsValid()) {
+    if (!aCborPublicKey.IsValid())
+    {
         return ERROR_INVALID_ARGS("validate COSE SIGN1 message with invalid public key");
     }
 
@@ -112,11 +116,13 @@ Error Sign1Message::Validate(const mbedtls_pk_context &aPubKey)
     const struct mbedtls_ecp_keypair *eckey;
 
     // Accepts only EC keys
-    if (!mbedtls_pk_can_do(&aPubKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPubKey)) == nullptr) {
+    if (!mbedtls_pk_can_do(&aPubKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPubKey)) == nullptr)
+    {
         return ERROR_INVALID_ARGS("validate COSE SIGN1 message without valid EC public key");
     }
 
-    if (!COSE_Sign0_validate_eckey(mSign, eckey, nullptr)) {
+    if (!COSE_Sign0_validate_eckey(mSign, eckey, nullptr))
+    {
         return ERROR_SECURITY("validate COSE SIGN1 message failed");
     }
 
@@ -128,11 +134,13 @@ Error Sign1Message::Sign(const mbedtls_pk_context &aPrivateKey)
     const mbedtls_ecp_keypair *eckey;
 
     // Accepts only EC keys
-    if (!mbedtls_pk_can_do(&aPrivateKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPrivateKey)) == nullptr) {
+    if (!mbedtls_pk_can_do(&aPrivateKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aPrivateKey)) == nullptr)
+    {
         return ERROR_INVALID_ARGS("sign COSE SIGN1 message without valid EC private key");
     }
 
-    if (!COSE_Sign0_Sign_eckey(mSign, eckey, nullptr)) {
+    if (!COSE_Sign0_Sign_eckey(mSign, eckey, nullptr))
+    {
         return ERROR_SECURITY("sign COSE SIGN1 message failed");
     }
 
@@ -143,14 +151,16 @@ Error Sign1Message::SetContent(const ByteArray &aContent)
 {
     if (!aContent.empty())
     {
-        if (!COSE_Sign0_SetContent(mSign, &aContent[0], aContent.size(), nullptr)) {
+        if (!COSE_Sign0_SetContent(mSign, &aContent[0], aContent.size(), nullptr))
+        {
             return ERROR_UNKNOWN("set COSE SIGN1 message content");
         }
     }
     else
     {
         uint8_t emptyContent;
-        if (!COSE_Sign0_SetContent(mSign, &emptyContent, 0, nullptr)) {
+        if (!COSE_Sign0_SetContent(mSign, &emptyContent, 0, nullptr))
+        {
             return ERROR_UNKNOWN("set COSE SIGN1 message content");
         }
     }
@@ -160,12 +170,14 @@ Error Sign1Message::SetContent(const ByteArray &aContent)
 
 Error Sign1Message::SetExternalData(const ByteArray &aExternalData)
 {
-    if (aExternalData.empty()) {
+    if (aExternalData.empty())
+    {
         return ERROR_INVALID_ARGS("cannot set COSE SIGN1 message to empty external data");
     }
 
-    if (!COSE_Sign0_SetExternal(mSign, aExternalData.data(), aExternalData.size(), nullptr)) {
-        return  ERROR_UNKNOWN("set COSE SIGN1 message external data failed");
+    if (!COSE_Sign0_SetExternal(mSign, aExternalData.data(), aExternalData.size(), nullptr))
+    {
+        return ERROR_UNKNOWN("set COSE SIGN1 message external data failed");
     }
 
     return ERROR_NONE;
@@ -173,7 +185,8 @@ Error Sign1Message::SetExternalData(const ByteArray &aExternalData)
 
 Error Sign1Message::AddAttribute(int key, int value, int flags)
 {
-    if (cn_cbor *cbor = cn_cbor_int_create(value, nullptr)) {
+    if (cn_cbor *cbor = cn_cbor_int_create(value, nullptr))
+    {
         auto error = AddAttribute(key, cbor, flags);
         if (cbor != nullptr && cbor->parent == nullptr)
         {
@@ -189,11 +202,13 @@ Error Sign1Message::AddAttribute(int key, int value, int flags)
 
 Error Sign1Message::AddAttribute(int aKey, const ByteArray &aValue, int aFlags)
 {
-    if (aValue.empty()) {
+    if (aValue.empty())
+    {
         return ERROR_INVALID_ARGS("add empty COSE SIGN1 message attribute");
     }
 
-    if  (cn_cbor *cbor = cn_cbor_data_create(aValue.data(), aValue.size(), nullptr)) {
+    if (cn_cbor *cbor = cn_cbor_data_create(aValue.data(), aValue.size(), nullptr))
+    {
         auto error = AddAttribute(aKey, cbor, aFlags);
         if (cbor != nullptr && cbor->parent == nullptr)
         {
@@ -201,7 +216,8 @@ Error Sign1Message::AddAttribute(int aKey, const ByteArray &aValue, int aFlags)
         }
         return error;
     }
-    else {
+    else
+    {
         return ERROR_OUT_OF_MEMORY("add COSE SIGN1 message attribute");
     }
 }
@@ -238,15 +254,18 @@ const uint8_t *Sign1Message::GetPayload(size_t &aLength)
     cn_cbor *      payload;
 
     ASSERT(mSign != nullptr);
-    if ((cbor = COSE_get_cbor(reinterpret_cast<HCOSE>(mSign))) == nullptr) {
+    if ((cbor = COSE_get_cbor(reinterpret_cast<HCOSE>(mSign))) == nullptr)
+    {
         return nullptr;
     }
 
-    if (cbor->type != CN_CBOR_ARRAY || (payload = CborArrayAt(cbor, 2)) == nullptr) {
+    if (cbor->type != CN_CBOR_ARRAY || (payload = CborArrayAt(cbor, 2)) == nullptr)
+    {
         return nullptr;
     }
 
-    if (payload->type != CN_CBOR_BYTES) {
+    if (payload->type != CN_CBOR_BYTES)
+    {
         return nullptr;
     }
 
@@ -259,19 +278,19 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
 {
     static constexpr size_t kMaxCoseKeyLength = 1024;
 
-    Error error;
+    Error                             error;
     const struct mbedtls_ecp_keypair *eckey;
-    CborMap coseKey;
-    int ec2Curve;
-    uint8_t xPoint[MBEDTLS_ECP_MAX_PT_LEN];
-    size_t  xLength;
-    uint8_t yPoint[MBEDTLS_ECP_MAX_PT_LEN];
-    size_t  yLength;
-    uint8_t encodedCoseKey[kMaxCoseKeyLength];
-    size_t  encodedCoseKeyLength;
+    CborMap                           coseKey;
+    int                               ec2Curve;
+    uint8_t                           xPoint[MBEDTLS_ECP_MAX_PT_LEN];
+    size_t                            xLength;
+    uint8_t                           yPoint[MBEDTLS_ECP_MAX_PT_LEN];
+    size_t                            yLength;
+    uint8_t                           encodedCoseKey[kMaxCoseKeyLength];
+    size_t                            encodedCoseKeyLength;
 
-    if (!mbedtls_pk_can_do(&aKey, MBEDTLS_PK_ECDSA) ||
-        (eckey = mbedtls_pk_ec(aKey)) == nullptr) {
+    if (!mbedtls_pk_can_do(&aKey, MBEDTLS_PK_ECDSA) || (eckey = mbedtls_pk_ec(aKey)) == nullptr)
+    {
         ExitNow(error = ERROR_INVALID_ARGS("Make COSE key without valid EC key"));
     }
 
@@ -304,7 +323,8 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
     SuccessOrExit(error = coseKey.Put(kKeyEC2Curve, ec2Curve));
 
     // Cose key EC2 X
-    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.X, xPoint, sizeof(xPoint))) {
+    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.X, xPoint, sizeof(xPoint)))
+    {
         ExitNow(error = ErrorFromMbedtlsError(fail));
     }
 
@@ -314,7 +334,8 @@ Error MakeCoseKey(ByteArray &aEncodedCoseKey, const mbedtls_pk_context &aKey, co
 
     // TODO(wgtdkp): handle the situation that Y point is not presented.
     // Cose key EC2 Y
-    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.Y, yPoint, sizeof(yPoint))) {
+    if (int fail = mbedtls_mpi_write_binary(&eckey->Q.Y, yPoint, sizeof(yPoint)))
+    {
         ExitNow(error = ErrorFromMbedtlsError(fail));
     }
 

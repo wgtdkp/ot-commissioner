@@ -83,7 +83,8 @@ Error Ipv6PrefixFromString(ByteArray &aPrefix, const std::string &aStr)
     {
         char *endPtr = nullptr;
         prefixLength = strtoull(&aStr[slash + 1], &endPtr, 0);
-        VerifyOrExit(endPtr != nullptr && endPtr > &aStr[slash + 1], error = ERROR_INVALID_ARGS("{} is not a valid IPv6 prefix", aStr));
+        VerifyOrExit(endPtr != nullptr && endPtr > &aStr[slash + 1],
+                     error = ERROR_INVALID_ARGS("{} is not a valid IPv6 prefix", aStr));
         VerifyOrExit(prefixLength <= 128, error = ERROR_INVALID_ARGS("{} is not a valid IPv6 prefix", aStr));
         prefixLength /= 8;
     }

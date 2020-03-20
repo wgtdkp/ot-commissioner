@@ -242,7 +242,7 @@ TEST_CASE("coap-message-payload", "[coap]")
     SECTION("payload marker present but there is no payload")
     {
         ByteArray buffer{0x40, 0x00, 0x00, 0x00, 0xFF};
-        Error     error  ;
+        Error     error;
         auto      message = Message::Deserialize(error, buffer);
         REQUIRE(message == nullptr);
         REQUIRE(error.GetCode() == ErrorCode::kBadFormat);
@@ -251,7 +251,7 @@ TEST_CASE("coap-message-payload", "[coap]")
     SECTION("payload marker present and there is payload")
     {
         ByteArray buffer{0x40, 0x00, 0x00, 0x00, 0xFF, 0xfa, 0xce};
-        Error     error  ;
+        Error     error;
         auto      message = Message::Deserialize(error, buffer);
         REQUIRE(message != nullptr);
         REQUIRE(error.NoError());

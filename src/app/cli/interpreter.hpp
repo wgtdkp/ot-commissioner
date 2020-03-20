@@ -64,14 +64,18 @@ private:
 
         // Allow implicit conversion from std::string to Value.
         Value(std::string aData)
-            : mData(aData) {}
+            : mData(aData)
+        {
+        }
 
         // Allow implicit conversion from Error to Value.
         Value(Error aError)
-            : mError(aError) {}
+            : mError(aError)
+        {
+        }
 
         std::string ToString() const;
-        bool NoError() const;
+        bool        NoError() const;
 
     private:
         Error       mError;

@@ -63,7 +63,8 @@ TEST_CASE("pskc-test-invalid-args", "[pskc]")
         const ByteArray   extendedPanId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
         ByteArray         pskc;
 
-        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() == ErrorCode::kInvalidArgs);
+        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() ==
+                ErrorCode::kInvalidArgs);
     }
 
     SECTION("passphrase is too long")
@@ -73,7 +74,8 @@ TEST_CASE("pskc-test-invalid-args", "[pskc]")
         const ByteArray   extendedPanId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
         ByteArray         pskc;
 
-        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() == ErrorCode::kInvalidArgs);
+        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() ==
+                ErrorCode::kInvalidArgs);
     }
 
     SECTION("network name is too long")
@@ -83,7 +85,8 @@ TEST_CASE("pskc-test-invalid-args", "[pskc]")
         const ByteArray   extendedPanId = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
         ByteArray         pskc;
 
-        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() == ErrorCode::kInvalidArgs);
+        REQUIRE(Commissioner::GeneratePSKc(pskc, passphrase, networkName, extendedPanId).GetCode() ==
+                ErrorCode::kInvalidArgs);
     }
 }
 

@@ -85,8 +85,8 @@ static std::string ErrorCodeToString(ErrorCode code)
 Error::Error(ErrorCode aErrorCode, std::string aErrorMessage)
 {
     ASSERT(aErrorCode != ErrorCode::kNone);
-    mState = std::unique_ptr<State>(new State);
-    mState->mCode = aErrorCode;
+    mState           = std::unique_ptr<State>(new State);
+    mState->mCode    = aErrorCode;
     mState->mMessage = aErrorMessage;
 }
 
@@ -96,7 +96,8 @@ const std::string &Error::EmptyString()
     return empty;
 }
 
-void Error::SetMessage(const std::string &aMessage) {
+void Error::SetMessage(const std::string &aMessage)
+{
     ASSERT(!NoError());
     mState->mMessage = aMessage;
 }

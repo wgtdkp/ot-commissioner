@@ -114,7 +114,7 @@ Error TokenManager::VerifyToken(CborMap &aToken, const ByteArray &aSignedToken, 
     SuccessOrExit(error = coseSign.Validate(aPublicKey));
 
     VerifyOrExit((payload = coseSign.GetPayload(payloadLength)) != NULL,
-        error = ERROR_BAD_FORMAT("cannot find payload in the signed COM_TOK"));
+                 error = ERROR_BAD_FORMAT("cannot find payload in the signed COM_TOK"));
 
     SuccessOrExit(error = CborValue::Deserialize(token, payload, payloadLength));
 
@@ -129,7 +129,7 @@ Error TokenManager::VerifyToken(CborMap &aToken, const ByteArray &aSignedToken, 
     if (std::string{domainName, domainNameLength} != mDomainName)
     {
         ExitNow(error = ERROR_SECURITY("the Domain Name ({}) in COM_TOK doesn't match the configured Domain Name ({})",
-            std::string{domainName, domainNameLength}, mDomainName));
+                                       std::string{domainName, domainNameLength}, mDomainName));
     }
 
     CborValue::Move(aToken, token);
@@ -171,10 +171,11 @@ void TokenManager::SendTokenRequest(Commissioner::Handler<ByteArray> aHandler)
         ASSERT(aResponse != nullptr);
 
         VerifyOrExit(aResponse->GetCode() == coap::Code::kChanged,
-            error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
+                     error = ERROR_BAD_FORMAT("expect response code as CoAP::CHANGED"));
         VerifyOrExit(aResponse->GetContentFormat(contentFormat).NoError(),
-            error = ERROR_BAD_FORMAT("cannot find valid CoAP Content Format option"));
-        VerifyOrExit(contentFormat == coap::ContentFormat::kCoseSign1,
+                     error = ERROR_BAD_FORMAT("cannot find valid CoAP Content Format option"));
+        VerifyOrExit(
+            contentFormat == coap::ContentFormat::kCoseSign1,
             error = ERROR_BAD_FORMAT("CoAP Content Format requires to be application/cose; cose-type=\"cose-sign1\""));
 
         SuccessOrExit(error = SetToken(aResponse->GetPayload(), mDomainCAPublicKey));
@@ -265,13 +266,13 @@ Error TokenManager::MakeTokenRequest(ByteArray &               aBuf,
     ByteArray encodedCoseKey;
     CborMap   coseKey;
     size_t    encodedLength = 0;
-    uint8_t tokenBuf[kMaxTokenRequestSize];
+    uint8_t   tokenBuf[kMaxTokenRequestSize];
 
     // Use the commissioner Id as kid(truncated to kMaxCoseKeyIdLength)
     const ByteArray kid = {aId.begin(), aId.begin() + std::min(aId.size(), (size_t)kMaxCoseKeyIdLength)};
 
     VerifyOrExit(mbedtls_pk_can_do(&aPublicKey, MBEDTLS_PK_ECDSA),
-        error = ERROR_INVALID_ARGS("the public key is not a ECDSA key"));
+                 error = ERROR_INVALID_ARGS("the public key is not a ECDSA key"));
     VerifyOrExit(!aId.empty(), error = ERROR_INVALID_ARGS("the ID is empty"));
     VerifyOrExit(!aDomainName.empty(), error = ERROR_INVALID_ARGS("the Domain Name is empty"));
 
@@ -364,7 +365,8 @@ Error TokenManager::PrepareSigningContent(ByteArray &aContent, const coap::Messa
     bool          isPendingSet = false;
     ByteArray     content;
 
-    VerifyOrExit(aMessage.GetUriPath(uri).NoError(), error = ERROR_INVALID_ARGS("the CoAP message has no valid URI Path option"));
+    VerifyOrExit(aMessage.GetUriPath(uri).NoError(),
+                 error = ERROR_INVALID_ARGS("the CoAP message has no valid URI Path option"));
 
     isActiveSet  = uri == uri::kMgmtActiveSet;
     isPendingSet = uri == uri::kMgmtPendingSet;

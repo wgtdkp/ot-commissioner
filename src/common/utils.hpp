@@ -52,13 +52,13 @@
 
 #define ASSERT_SUCCESS(expr) ASSERT((expr).NoError())
 
-#define SuccessOrExit(aError)         \
-    do                                \
-    {                                 \
-        if (!(aError).NoError())      \
-        {                             \
-            goto exit;                \
-        }                             \
+#define SuccessOrExit(aError)    \
+    do                           \
+    {                            \
+        if (!(aError).NoError()) \
+        {                        \
+            goto exit;           \
+        }                        \
     } while (false)
 
 #define VerifyOrExit(aCondition, ...) \
@@ -77,7 +77,6 @@
         __VA_ARGS__; \
         goto exit;   \
     } while (false)
-
 
 namespace ot {
 

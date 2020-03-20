@@ -54,12 +54,14 @@ TEST_CASE("mesh-local-address-invalid-args", "[mesh-local-addr]")
 
     SECTION("invalid prefix length")
     {
-        REQUIRE(Commissioner::GetMeshLocalAddr(meshLocalAddr, "fd00::/63", 0xBBCC).GetCode() == ErrorCode::kInvalidArgs);
+        REQUIRE(Commissioner::GetMeshLocalAddr(meshLocalAddr, "fd00::/63", 0xBBCC).GetCode() ==
+                ErrorCode::kInvalidArgs);
     }
 
     SECTION("prefix length is not 8 bytes")
     {
-        REQUIRE(Commissioner::GetMeshLocalAddr(meshLocalAddr, "fd00::/48", 0xBBCC).GetCode() == ErrorCode::kInvalidArgs);
+        REQUIRE(Commissioner::GetMeshLocalAddr(meshLocalAddr, "fd00::/48", 0xBBCC).GetCode() ==
+                ErrorCode::kInvalidArgs);
     }
 
     SECTION("invalid prefix format")

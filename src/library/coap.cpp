@@ -86,7 +86,8 @@ Error Message::AppendOption(OptionType aNumber, const OptionValue &aValue)
 
     // This will silently ignore options with unrecognized
     // option number and elective options with bad value.
-    if (!IsValidOption(aNumber, aValue)) {
+    if (!IsValidOption(aNumber, aValue))
+    {
         ExitNow(error = ERROR_INVALID_ARGS("invalid CoAP option (number={})", aNumber));
     }
 
@@ -109,7 +110,7 @@ exit:
 Error Message::GetOption(std::string &aValue, OptionType aNumber) const
 {
     Error error;
-    auto option = GetOption(aNumber);
+    auto  option = GetOption(aNumber);
 
     VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
 
@@ -122,7 +123,7 @@ exit:
 Error Message::GetOption(uint32_t &aValue, OptionType aNumber) const
 {
     Error error;
-    auto option = GetOption(aNumber);
+    auto  option = GetOption(aNumber);
 
     VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
 
@@ -135,7 +136,7 @@ exit:
 Error Message::GetOption(ByteArray &aValue, OptionType aNumber) const
 {
     Error error;
-    auto option = GetOption(aNumber);
+    auto  option = GetOption(aNumber);
 
     VerifyOrExit(option != nullptr, error = ERROR_NOT_FOUND("CoAP option (number={}) not found", aNumber));
 
@@ -199,7 +200,7 @@ exit:
 
 Error Message::Deserialize(Header &aHeader, const ByteArray &aBuf, size_t &aOffset)
 {
-    Error error;
+    Error  error;
     Header header;
     size_t offset = aOffset;
 
@@ -215,7 +216,8 @@ Error Message::Deserialize(Header &aHeader, const ByteArray &aBuf, size_t &aOffs
     header.mMessageId = aBuf[offset++];
     header.mMessageId = (header.mMessageId << 8) | aBuf[offset++];
 
-    VerifyOrExit(offset + header.mTokenLength <= aBuf.size(), error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
+    VerifyOrExit(offset + header.mTokenLength <= aBuf.size(),
+                 error = ERROR_BAD_FORMAT("premature end of CoAP message header"));
     memcpy(header.mToken, &aBuf[offset], std::min(header.mTokenLength, kMaxTokenLength));
     offset += header.mTokenLength;
 
@@ -245,7 +247,8 @@ Error Message::Serialize(OptionType         aOptionNumber,
 
     ASSERT(utils::to_underlying(aOptionNumber) >= aLastOptionNumber);
 
-    VerifyOrExit(IsValidOption(aOptionNumber, aOptionValue), error = ERROR_INVALID_ARGS("option (number={}) is not valid", aOptionNumber));
+    VerifyOrExit(IsValidOption(aOptionNumber, aOptionValue),
+                 error = ERROR_INVALID_ARGS("option (number={}) is not valid", aOptionNumber));
 
     length = 1;
     length += delta < kOption1ByteExtensionOffset ? 0 : (delta < kOption2ByteExtensionOffset ? 1 : 2);
@@ -335,10 +338,10 @@ Error Message::Deserialize(OptionType &     aOptionNumber,
     }
     else
     {
-
         // we have delta == 0x0f
 
-        VerifyOrExit(valueLength == 0x0f, error = ERROR_BAD_FORMAT("invalid CoAP option (firstByte={:X})", aBuf[firstByte]));
+        VerifyOrExit(valueLength == 0x0f,
+                     error = ERROR_BAD_FORMAT("invalid CoAP option (firstByte={:X})", aBuf[firstByte]));
         ExitNow(error = ERROR_NOT_FOUND("cannot find more CoAP option"));
     }
 
@@ -418,8 +421,9 @@ Error Coap::AddResource(const Resource &aResource)
     Error error;
     auto  res = mResources.find(aResource.GetUriPath());
 
-    if (res != mResources.end()) {
-      ExitNow(error = ERROR_ALREADY_EXISTS("CoAP resource {} already exists", aResource.GetUriPath()));
+    if (res != mResources.end())
+    {
+        ExitNow(error = ERROR_ALREADY_EXISTS("CoAP resource {} already exists", aResource.GetUriPath()));
     }
     mResources.emplace(aResource.GetUriPath(), aResource);
 
@@ -443,7 +447,7 @@ void Coap::SendRequest(const Request &aRequest, ResponseHandler aHandler)
     auto  request = std::make_shared<Request>(aRequest);
 
     VerifyOrExit(request->IsConfirmable() || request->IsNonConfirmable(),
-        error = ERROR_INVALID_ARGS("a CoAP request is neither Confirmable nor NON-Confirmable"));
+                 error = ERROR_INVALID_ARGS("a CoAP request is neither Confirmable nor NON-Confirmable"));
 
     ASSERT(request->GetMessageId() == 0);
     request->SetMessageId(AllocMessageId());
@@ -485,7 +489,8 @@ Error Coap::SendResponse(const Request &aRequest, Response &aResponse)
 
 Error Coap::SendEmptyChanged(const Request &aRequest)
 {
-    if (!aRequest.IsConfirmable()) {
+    if (!aRequest.IsConfirmable())
+    {
         return ERROR_INVALID_ARGS("the CoAP request is not Confirmable");
     }
     return SendHeaderResponse(Code::kChanged, aRequest);
@@ -565,7 +570,7 @@ exit:
 void Coap::HandleResponse(const Response &aResponse)
 {
     const RequestHolder *requestHolder = nullptr;
-    std::string requestUri = "UNKNOWN_URI";
+    std::string          requestUri    = "UNKNOWN_URI";
 
     requestHolder = mRequestsCache.Match(aResponse);
     if (requestHolder == nullptr)
@@ -977,9 +982,9 @@ Error Message::SplitUriPath(std::list<std::string> &aUriPathList, const std::str
 //   applying percent-decode;
 Error Message::NormalizeUriPath(std::string &aUriPath)
 {
-    auto xdigit = [](char c) { return 'A' <= c && c <= 'F' ? c - 'A' : 'a' <= c && c <= 'f' ? c - 'a' : c - '0'; };
+    auto   xdigit = [](char c) { return 'A' <= c && c <= 'F' ? c - 'A' : 'a' <= c && c <= 'f' ? c - 'a' : c - '0'; };
     size_t begin = 0, end = aUriPath.size();
-    Error error;
+    Error  error;
 
     while (begin < aUriPath.size() && isspace(aUriPath[begin]))
     {
@@ -1042,7 +1047,7 @@ std::shared_ptr<Message> Message::Deserialize(Error &aError, const ByteArray &aB
         // Stop if any unrecognized option is critical.
         // Otherwise, we need to proceed to decoding following options.
         VerifyOrExit(IsValidOption(number, value) || !IsCriticalOption(number),
-            error = ERROR_BAD_FORMAT("bad CoAP option (number={}", number));
+                     error = ERROR_BAD_FORMAT("bad CoAP option (number={}", number));
 
         message->AppendOption(number, value);
         lastOptionNumber = utils::to_underlying(number);

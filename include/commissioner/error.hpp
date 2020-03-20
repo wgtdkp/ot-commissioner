@@ -45,7 +45,8 @@ namespace commissioner {
  * The canonical error codes for OT Commissioner APIs.
  *
  */
-enum class ErrorCode : int {
+enum class ErrorCode : int
+{
     /**
      * Not an error; returned on success.
      */
@@ -154,7 +155,8 @@ enum class ErrorCode : int {
  * Denotes error of a call in OT Commissioner.
  *
  */
-class Error {
+class Error
+{
 public:
     /**
      * The default error is none error.
@@ -170,23 +172,19 @@ public:
     Error(ErrorCode aErrorCode, std::string aErrorMessage);
 
     // Copy the specified status.
-    Error(const Error& aError);
-    Error& operator=(const Error& aError);
-    Error(Error&& aError) noexcept;
-    Error& operator=(Error&& aError) noexcept;
+    Error(const Error &aError);
+    Error &operator=(const Error &aError);
+    Error(Error &&aError) noexcept;
+    Error &operator=(Error &&aError) noexcept;
 
     /**
      * Returns true if there is no error.
      */
     bool NoError() const { return (mState == nullptr); }
 
-    ErrorCode GetCode() const {
-        return NoError() ? ErrorCode::kNone : mState->mCode;
-    }
+    ErrorCode GetCode() const { return NoError() ? ErrorCode::kNone : mState->mCode; }
 
-    const std::string& GetMessage() const {
-        return NoError() ? EmptyString() : mState->mMessage;
-    }
+    const std::string &GetMessage() const { return NoError() ? EmptyString() : mState->mMessage; }
 
     void SetMessage(const std::string &aMessage);
 
@@ -204,10 +202,11 @@ public:
     void IgnoreError() const {}
 
 private:
-    static const std::string& EmptyString();
+    static const std::string &EmptyString();
 
-    struct State {
-        ErrorCode mCode;
+    struct State
+    {
+        ErrorCode   mCode;
         std::string mMessage;
     };
 
@@ -217,20 +216,29 @@ private:
     std::unique_ptr<State> mState;
 };
 
-inline Error::Error(const Error& aError)
-    : mState((aError.mState == nullptr) ? nullptr : new State(*aError.mState)) {}
+inline Error::Error(const Error &aError)
+    : mState((aError.mState == nullptr) ? nullptr : new State(*aError.mState))
+{
+}
 
-inline Error& Error::operator=(const Error& aError) {
-    if (mState != aError.mState) {
+inline Error &Error::operator=(const Error &aError)
+{
+    if (mState != aError.mState)
+    {
         mState.reset((aError.mState == nullptr) ? nullptr : new State(*aError.mState));
     }
     return *this;
 }
 
-inline Error::Error(Error&& aError) noexcept : mState(std::move(aError.mState)) {}
+inline Error::Error(Error &&aError) noexcept
+    : mState(std::move(aError.mState))
+{
+}
 
-inline Error& Error::operator=(Error&& aError) noexcept {
-    if (mState != aError.mState) {
+inline Error &Error::operator=(Error &&aError) noexcept
+{
+    if (mState != aError.mState)
+    {
         mState = std::move(aError.mState);
     }
     return *this;

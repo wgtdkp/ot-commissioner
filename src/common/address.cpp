@@ -54,14 +54,15 @@ exit:
 
 Error Address::Set(const std::string &aIp)
 {
-    Error error;
+    Error     error;
     ByteArray bytes;
 
     bytes.resize(kIpv4Size);
     if (inet_pton(AF_INET, aIp.c_str(), bytes.data()) != 1)
     {
         bytes.resize(kIpv6Size);
-        if (inet_pton(AF_INET6, aIp.c_str(), bytes.data()) != 1) {
+        if (inet_pton(AF_INET6, aIp.c_str(), bytes.data()) != 1)
+        {
             ExitNow(error = ERROR_INVALID_ARGS("{} is not a valid IP address", aIp));
         }
     }
@@ -77,7 +78,7 @@ Error Address::Set(const sockaddr_storage &aSockAddr)
     Error error;
 
     VerifyOrExit(aSockAddr.ss_family == AF_INET || aSockAddr.ss_family == AF_INET6,
-        error = ERROR_INVALID_ARGS("only AF_INET and AF_INET6 address families are supported"));
+                 error = ERROR_INVALID_ARGS("only AF_INET and AF_INET6 address families are supported"));
 
     if (aSockAddr.ss_family == AF_INET)
     {
@@ -99,19 +100,19 @@ exit:
 std::string Address::ToString() const
 {
     static const char *kInvalidAddr = "INVALID_ADDR";
-    std::string result;
+    std::string        result;
 
     if (mBytes.size() == kIpv4Size)
     {
         char ipv4[INET_ADDRSTRLEN];
         auto ret = inet_ntop(AF_INET, mBytes.data(), ipv4, sizeof(ipv4));
-        result = (ret == nullptr) ? kInvalidAddr : ret;
+        result   = (ret == nullptr) ? kInvalidAddr : ret;
     }
     else if (mBytes.size() == kIpv6Size)
     {
         char ipv6[INET6_ADDRSTRLEN];
         auto ret = inet_ntop(AF_INET6, mBytes.data(), ipv6, sizeof(ipv6));
-        result = (ret == nullptr) ? kInvalidAddr : ret;
+        result   = (ret == nullptr) ? kInvalidAddr : ret;
     }
     else
     {

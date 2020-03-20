@@ -170,20 +170,19 @@ void CommissioningSession::HandleJoinFin(const coap::Request &aJoinFin)
     SuccessOrExit(error = GetTlvSet(tlvSet, aJoinFin));
 
     VerifyOrExit((stateTlv = tlvSet[tlv::Type::kState]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid State TLV found"));
-
+                 error = ERROR_BAD_FORMAT("no valid State TLV found"));
 
     VerifyOrExit((vendorNameTlv = tlvSet[tlv::Type::kVendorName]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Vendor Name TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Vendor Name TLV found"));
 
     VerifyOrExit((vendorModelTlv = tlvSet[tlv::Type::kVendorModel]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Vendor Model TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Vendor Model TLV found"));
 
     VerifyOrExit((vendorSwVersionTlv = tlvSet[tlv::Type::kVendorSWVersion]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Vendor SW Version TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Vendor SW Version TLV found"));
 
     VerifyOrExit((vendorStackVersionTlv = tlvSet[tlv::Type::kVendorStackVersion]) != nullptr,
-        error = ERROR_BAD_FORMAT("no valid Vendor Stack Version TLV found"));
+                 error = ERROR_BAD_FORMAT("no valid Vendor Stack Version TLV found"));
 
     LOG_INFO("received JOIN_FIN.req: vendorName={}, vendorModel={}, vendorSWVversion={}, vendorStackVersion={}",
              vendorNameTlv->GetValueAsString(), vendorModelTlv->GetValueAsString(),
@@ -194,7 +193,8 @@ void CommissioningSession::HandleJoinFin(const coap::Request &aJoinFin)
         auto vendorDataTlv = tlvSet[tlv::Type::kVendorData];
         VerifyOrExit(vendorDataTlv != nullptr, error = ERROR_BAD_FORMAT("no valid Vendor Data TLV found"));
         VerifyOrExit(provisioningUrlTlv->GetValueAsString() == mJoinerInfo.mProvisioningUrl,
-            error = ERROR_REJECTED("joiner provisioning URL doesn't match: {} != {}", provisioningUrlTlv->GetValueAsString(), mJoinerInfo.mProvisioningUrl));
+                     error = ERROR_REJECTED("joiner provisioning URL doesn't match: {} != {}",
+                                            provisioningUrlTlv->GetValueAsString(), mJoinerInfo.mProvisioningUrl));
 
         provisioningUrl = provisioningUrlTlv->GetValueAsString();
         vendorData      = vendorDataTlv->GetValue();
@@ -213,7 +213,8 @@ void CommissioningSession::HandleJoinFin(const coap::Request &aJoinFin)
         accepted = provisioningUrl.empty();
     }
 
-    LOG_INFO("joiner(IID={}, EUI64={:X}) was {}", utils::Hex(mJoinerIid), mJoinerInfo.mEui64, (accepted ? "accepted" : "rejected"));
+    LOG_INFO("joiner(IID={}, EUI64={:X}) was {}", utils::Hex(mJoinerIid), mJoinerInfo.mEui64,
+             (accepted ? "accepted" : "rejected"));
 
 exit:
     if (!error.NoError())

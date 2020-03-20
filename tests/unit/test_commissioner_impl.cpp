@@ -85,7 +85,8 @@ TEST_CASE("commissioner-impl-not-implemented-APIs", "[comm-impl]")
     REQUIRE(commImpl.CommandMigrate(kDstAddr, "designated-net").GetCode() == ErrorCode::kUnimplemented);
 
     uint8_t mlrStatus;
-    REQUIRE(commImpl.RegisterMulticastListener(mlrStatus, kDstAddr, {"ff02::9"}, 300).GetCode() == ErrorCode::kUnimplemented);
+    REQUIRE(commImpl.RegisterMulticastListener(mlrStatus, kDstAddr, {"ff02::9"}, 300).GetCode() ==
+            ErrorCode::kUnimplemented);
 
     REQUIRE(commImpl.AnnounceBegin(0xFFFFFFFF, 10, 10, kDstAddr).GetCode() == ErrorCode::kUnimplemented);
     REQUIRE(commImpl.PanIdQuery(0xFFFFFFFF, 0xFACE, kDstAddr).GetCode() == ErrorCode::kUnimplemented);

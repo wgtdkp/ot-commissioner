@@ -66,7 +66,8 @@ Error BorderAgentQuerier::Setup()
     ASSERT(mSocket < 0);
 
     int socket = mdns_socket_open_ipv4();
-    if (socket < 0) {
+    if (socket < 0)
+    {
         return ERROR_UNKNOWN("open IPv4 socket failed");
     }
 
@@ -86,10 +87,10 @@ void BorderAgentQuerier::SendQuery(ResponseHandler aHandler)
     static const mdns_record_type_t kMdnsQueryType = MDNS_RECORDTYPE_PTR;
     static const char *             kServiceName   = "_meshcop._udp.local";
 
-    Error error;
+    Error   error;
     uint8_t buf[kDefaultBufferSize];
 
-    VerifyOrExit (mSocket < 0, error = ERROR_BUSY("there are outstanding queries"));
+    VerifyOrExit(mSocket < 0, error = ERROR_BUSY("there are outstanding queries"));
     SuccessOrExit(error = Setup());
 
     if (mdns_query_send(mSocket, kMdnsQueryType, kServiceName, strlen(kServiceName), buf, sizeof(buf)) != 0)
@@ -396,7 +397,8 @@ int BorderAgentQuerier::HandleRecord(const struct sockaddr *from,
     }
 
 exit:
-    if (!error.NoError()) {
+    if (!error.NoError())
+    {
         Log(LogLevel::kError, error.ToString());
     }
     return error.NoError() ? 0 : -1;

@@ -75,8 +75,10 @@ TEST_CASE("cose-sign-and-verify", "[cose]")
     mbedtls_pk_init(&publicKey);
     mbedtls_pk_init(&privateKey);
 
-    REQUIRE(TokenManager::ParsePublicKey(publicKey, ByteArray{kCertificate, kCertificate + sizeof(kCertificate)}).NoError());
-    REQUIRE(TokenManager::ParsePrivateKey(privateKey, ByteArray{kPrivateKey, kPrivateKey + sizeof(kPrivateKey)}).NoError());
+    REQUIRE(TokenManager::ParsePublicKey(publicKey, ByteArray{kCertificate, kCertificate + sizeof(kCertificate)})
+                .NoError());
+    REQUIRE(
+        TokenManager::ParsePrivateKey(privateKey, ByteArray{kPrivateKey, kPrivateKey + sizeof(kPrivateKey)}).NoError());
 
     SECTION("cose sign without external data")
     {
