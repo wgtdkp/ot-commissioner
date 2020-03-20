@@ -364,7 +364,7 @@ void CommissionerImpl::Connect(ErrorHandler aHandler, const std::string &aAddr, 
 
 void CommissionerImpl::Disconnect()
 {
-    mBrClient.Disconnect();
+    mBrClient.Disconnect(ERROR_CANCELLED("the CoAPs client was disconnected"));
 }
 
 uint16_t CommissionerImpl::GetSessionId() const

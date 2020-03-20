@@ -190,7 +190,7 @@ void TokenManager::SendTokenRequest(Commissioner::Handler<ByteArray> aHandler)
         }
 
         // Disconnect from the registrar.
-        mRegistrarClient.Disconnect();
+        mRegistrarClient.Disconnect(ERROR_NONE);
     };
 
     SuccessOrExit(error = request.SetUriPath(uri::kComToken));

@@ -89,12 +89,13 @@ public:
         return;
     }
 
-    void Stop() { Disconnect(); }
+    void Stop() { Disconnect(ERROR_CANCELLED("the CoAPs server has been stopped")); }
 
-    void Disconnect()
+    void Disconnect(Error aError)
     {
-        mDtlsSession.Disconnect(Error::kAbort);
+        mDtlsSession.Disconnect(aError);
         mCoap.ClearRequestsAndResponses();
+        mSocket->Reset();
     }
 
     Error AddResource(const Resource &aResource) { return mCoap.AddResource(aResource); }

@@ -84,57 +84,6 @@ static void HandleMbedtlsDebug(void *, int level, const char *file, int line, co
     }
 }
 
-/**
- * This function convert mbedtls error to OT Commissioner error.
- *
- * For the implementation details, please reference to <mbedtls/error.h>.
- *
- */
-static Error ErrorFromMbedtlsError(int aMbedtlsError)
-{
-    // See <mbedtls/error.h> for the constants.
-    static constexpr int kMbedtlsErrorLowLevelNetBegin        = -0x0052;
-    static constexpr int kMbedtlsErrorLowLevelNetEnd          = -0x0042;
-    static constexpr int kMbedtlsErrorHighLevelModuleIdMask   = 0x7000;
-    static constexpr int kMbedtlsErrorHighLevelModuleIdOffset = 12;
-    static constexpr int kMbedtlsErrorHighLevelModuleIdCipher = 6;
-    static constexpr int kMbedtlsErrorHighLevelModuleIdSsl    = 7;
-
-    ASSERT(aMbedtlsError <= 0);
-
-    Error error;
-
-    uint16_t highLevelModuleId = (static_cast<uint16_t>(-aMbedtlsError) & kMbedtlsErrorHighLevelModuleIdMask) >>
-                                 kMbedtlsErrorHighLevelModuleIdOffset;
-
-    if (aMbedtlsError == 0)
-    {
-        error = Error::kNone;
-    }
-    else if (aMbedtlsError == MBEDTLS_ERR_SSL_WANT_READ || aMbedtlsError == MBEDTLS_ERR_SSL_WANT_WRITE ||
-             aMbedtlsError == MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS || aMbedtlsError == MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS)
-    {
-        error = Error::kTransportBusy;
-    }
-    else if (aMbedtlsError >= kMbedtlsErrorLowLevelNetBegin && aMbedtlsError <= kMbedtlsErrorLowLevelNetEnd)
-    {
-        // Low-level NET error.
-        error = Error::kTransportFailed;
-    }
-    else if (highLevelModuleId == kMbedtlsErrorHighLevelModuleIdCipher ||
-             highLevelModuleId == kMbedtlsErrorHighLevelModuleIdSsl)
-    {
-        // High-level SSL or CIPHER error.
-        error = Error::kSecurity;
-    }
-    else
-    {
-        error = Error::kFailed;
-    }
-
-    return error;
-}
-
 DtlsConfig GetDtlsConfig(const Config &aConfig)
 {
     DtlsConfig dtlsConfig;

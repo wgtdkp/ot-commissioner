@@ -89,7 +89,7 @@ exit:
 
 void CommissioningSession::Stop()
 {
-    mDtlsSession->Disconnect(Error::kAbort);
+    mDtlsSession->Disconnect(ERROR_ABORTED("the joiner commissioning session was aborted"));
 }
 
 Error CommissioningSession::RecvJoinerDtlsRecords(const ByteArray &aRecords)
