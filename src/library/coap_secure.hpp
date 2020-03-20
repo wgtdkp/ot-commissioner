@@ -93,7 +93,7 @@ public:
 
     void Disconnect()
     {
-        mDtlsSession.Disconnect();
+        mDtlsSession.Disconnect(Error::kAbort);
         mCoap.ClearRequestsAndResponses();
     }
 
