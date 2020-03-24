@@ -57,6 +57,6 @@ if [ $TRAVIS_OS_NAME = "linux" ] && [ ${OT_COMM_CXX_STANDARD} = "11" ]; then
         ## Integration tests
         cd ../tests/integration
         ./bootstrap.sh
-        ./run_tests.sh
+        ./run_tests.sh test_joining
     fi
 fi
