@@ -60,6 +60,7 @@
 }
 
 %apply std::string& OUTPUT { std::string &aMeshLocalAddr }
+%apply std::string& OUTPUT { std::string &aExistingCommissionerId }
 
 %shared_ptr(ot::commissioner::Commissioner)
 
@@ -70,7 +71,7 @@ namespace commissioner {
     // Remove async commissioner APIs.
     %ignore Commissioner::Discover(Handler<std::list<BorderAgent>> aHandler);
     %ignore Commissioner::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort);
-    %ignore Commissioner::Petition(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort);
+    %ignore Commissioner::Petition(PetitionHandler aHandler, const std::string &aAddr, uint16_t aPort);
     %ignore Commissioner::Resign(ErrorHandler aHandler);
     %ignore Commissioner::GetCommissionerDataset(Handler<CommissionerDataset> aHandler, uint16_t aDatasetFlags);
     %ignore Commissioner::SetCommissionerDataset(ErrorHandler aHandler, const CommissionerDataset &aDataset);

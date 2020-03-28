@@ -156,7 +156,6 @@ CommissionerImpl::CommissionerImpl(CommissionerHandler &aHandler, struct event_b
     , mResourcePanIdConflict(uri::kMgmtPanidConflict,
                              [this](const coap::Request &aRequest) { HandlePanIdConflict(aRequest); })
     , mResourceEnergyReport(uri::kMgmtEdReport, [this](const coap::Request &aRequest) { HandleEnergyReport(aRequest); })
-    , mCommissioningHandler(nullptr)
 {
     ASSERT(mBrClient.AddResource(mResourceUdpRx) == Error::kNone);
     ASSERT(mBrClient.AddResource(mResourceRlyRx) == Error::kNone);
@@ -258,11 +257,6 @@ void CommissionerImpl::LoggingConfig()
 const Config &CommissionerImpl::GetConfig() const
 {
     return mConfig;
-}
-
-void CommissionerImpl::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
-{
-    mCommissioningHandler = aCommissioningHandler;
 }
 
 Error CommissionerImpl::Start()

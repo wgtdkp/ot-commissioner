@@ -198,17 +198,9 @@ void CommissioningSession::HandleJoinFin(const coap::Request &aJoinFin)
     }
 
     // Validation done, request commissioning by user.
-    if (mCommImpl.mCommissioningHandler != nullptr)
-    {
-        accepted = mCommImpl.mCommissioningHandler(
-            mJoinerInfo, vendorNameTlv->GetValueAsString(), vendorModelTlv->GetValueAsString(),
-            vendorSwVersionTlv->GetValueAsString(), vendorStackVersionTlv->GetValue(), provisioningUrl, vendorData);
-    }
-    else
-    {
-        // Accepts a joiner if requirement on vendor-specific provisioning.
-        accepted = provisioningUrl.empty();
-    }
+    accepted = mCommImpl.mCommissionerHandler.OnCommissioning(
+        mJoinerInfo, vendorNameTlv->GetValueAsString(), vendorModelTlv->GetValueAsString(),
+        vendorSwVersionTlv->GetValueAsString(), vendorStackVersionTlv->GetValue(), provisioningUrl, vendorData);
 
 exit:
     if (error != Error::kNone)

@@ -44,7 +44,7 @@ endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_subdirectory(bindings EXCLUDE_FROM_ALL)
+add_subdirectory(bindings)
 add_subdirectory(src)
 
 if (OT_COMM_TEST)

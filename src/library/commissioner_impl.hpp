@@ -79,8 +79,6 @@ public:
 
     const Config &GetConfig() const override;
 
-    void SetCommissioningHandler(CommissioningHandler aCommissioningHandler) override;
-
     uint16_t GetSessionId() const override;
 
     State GetState() const override;
@@ -287,8 +285,6 @@ private:
     coap::Resource       mResourceDatasetChanged;
     coap::Resource       mResourcePanIdConflict;
     coap::Resource       mResourceEnergyReport;
-
-    CommissioningHandler mCommissioningHandler;
 };
 
 /*

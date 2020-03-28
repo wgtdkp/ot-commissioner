@@ -75,8 +75,6 @@ public:
 
     const Config &GetConfig() const override;
 
-    void SetCommissioningHandler(CommissioningHandler aCommissioningHandler) override;
-
     uint16_t GetSessionId() const override;
 
     State GetState() const override;

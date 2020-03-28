@@ -47,29 +47,6 @@ namespace ot {
 
 namespace commissioner {
 
-/**
- * The default commissioning handler that always accepts any joiner.
- *
- */
-static bool DefaultCommissioningHandler(const JoinerInfo & aJoinerInfo,
-                                        const std::string &aVendorName,
-                                        const std::string &aVendorModel,
-                                        const std::string &aVendorSwVersion,
-                                        const ByteArray &  aVendorStackVersion,
-                                        const std::string &aProvisioningUrl,
-                                        const ByteArray &  aVendorData)
-{
-    (void)aJoinerInfo;
-    (void)aVendorName;
-    (void)aVendorModel;
-    (void)aVendorSwVersion;
-    (void)aVendorStackVersion;
-    (void)aProvisioningUrl;
-    (void)aVendorData;
-
-    return true;
-}
-
 std::shared_ptr<CommissionerApp> CommissionerApp::Create(const Config &aConfig)
 {
     Error error = Error::kNone;
@@ -90,9 +67,6 @@ Error CommissionerApp::Init(const Config &aConfig)
     SuccessOrExit(error = commissioner->Start());
 
     mCommissioner = commissioner;
-
-    // This is the default behavior of OpenThread on-Mesh Commissioner.
-    mCommissioner->SetCommissioningHandler(DefaultCommissioningHandler);
 
 exit:
     return error;
@@ -1281,6 +1255,24 @@ const JoinerInfo *CommissionerApp::OnJoinerRequest(JoinerType aType, const ByteA
         return &joinerInfo->second;
     }
     return nullptr;
+}
+
+bool CommissionerApp::OnCommissioning(const JoinerInfo & aJoinerInfo,
+                                    const std::string &aVendorName,
+                                    const std::string &aVendorModel,
+                                    const std::string &aVendorSwVersion,
+                                    const ByteArray &  aVendorStackVersion,
+                                    const std::string &aProvisioningUrl,
+                                    const ByteArray &  aVendorData)
+{
+    (void)aJoinerInfo;
+    (void)aVendorName;
+    (void)aVendorModel;
+    (void)aVendorSwVersion;
+    (void)aVendorStackVersion;
+    (void)aProvisioningUrl;
+    (void)aVendorData;
+    return true;
 }
 
 static std::string ToString(LogLevel aLevel)

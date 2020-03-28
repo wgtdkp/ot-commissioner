@@ -167,6 +167,7 @@ struct JoinerInfo
 class CommissionerHandler
 {
 public:
+
     /**
      * The MGMT_PANID_CONFLICT.ans handler.
      *
@@ -214,10 +215,53 @@ public:
         (void)aJoinerId;
         return nullptr;
     }
-    virtual void              OnJoinerFinalize(const JoinerInfo &aJoinerInfo)                     {
+
+    /**
+     * The function requests vendor-specific commissioning.
+     *
+     * @param[in]  aJoinerInfo         A joiner info indexing the commissioning joiner.
+     * @param[in]  aVendorName         A human-readable product vendor name string in utf-8 format.
+     * @param[in]  aVendorModel        A human-readable product model string.
+     * @param[in]  aVendorSwVersion    A utf-8 string that specifies the product software version.
+     * @param[in]  aVendorStackVersion A vendor stack version of fixed length (5 bytes). See section
+     *                                 8.10.3.6 of Thread spec for detail.
+     * @param[in]  aProvisioningUrl    A URL encoded as a utf-8 string provided by the Joiner
+     *                                 to communicate to the user which Commissioning application
+     *                                 is best suited to properly provision it to the appropriate
+     *                                 service. Empty if the joiner doesn't provide it.
+     * @param[in]  aVendorData         A product vendor-defined data structure to guide
+     *                                 vendor-specific provisioning. Empty if the joiner doesn't provide it.
+     *
+     * @return  A boolean indicates whether the joiner is accepted.
+     *
+     * @note This will be called when A well-formed JOIN_FIN.req has been received.
+     *
+     */
+    virtual bool OnCommissioning(const JoinerInfo & aJoinerInfo,
+                                 const std::string &aVendorName,
+                                 const std::string &aVendorModel,
+                                 const std::string &aVendorSwVersion,
+                                 const ByteArray &  aVendorStackVersion,
+                                 const std::string &aProvisioningUrl,
+                                 const ByteArray &  aVendorData)
+    {
+        (void)aJoinerInfo;
+        (void)aVendorName;
+        (void)aVendorModel;
+        (void)aVendorSwVersion;
+        (void)aVendorStackVersion;
+        (void)aProvisioningUrl;
+        (void)aVendorData;
+        return true;
+    }
+
+    virtual void OnJoinerFinalize(const JoinerInfo &aJoinerInfo)
+    {
         (void)aJoinerInfo;
     }
+
     virtual void              OnDatasetChanged()                                                  {}
+
     virtual void              OnLogging(LogLevel aLevel, const std::string &aMsg)                 {
         (void)aLevel;
         (void)aMsg;
@@ -252,62 +296,15 @@ public:
     template <class T> using Handler = std::function<void(const T *aResponseData, Error aError)>;
 
     /**
-     * The callback provided by vendor (application) to commission a joiner.
+     * The petition result handler.
      *
-     * @param[in]  aJoinerInfo         A joiner info indexing the commissioning joiner.
-     * @param[in]  aVendorName         A human-readable product vendor name string in utf-8 format.
-     * @param[in]  aVendorModel        A human-readable product model string.
-     * @param[in]  aVendorSwVersion    A utf-8 string that specifies the product software version.
-     * @param[in]  aVendorStackVersion A vendor stack version of fixed length (5 bytes). See section
-     *                                 8.10.3.6 of Thread spec for detail.
-     * @param[in]  aProvisioningUrl    A URL encoded as a utf-8 string provided by the Joiner
-     *                                 to communicate to the user which Commissioning application
-     *                                 is best suited to properly provision it to the appropriate
-     *                                 service. Empty if the joiner doesn't provide it.
-     * @param[in]  aVendorData         A product vendor-defined data structure to guide
-     *                                 vendor-specific provisioning. Empty if the joiner doesn't provide it.
+     * @param[in] aExistingCommissionerId  The Existing commissioner Id. nullable.
+     * @param[in] aError                   An error code.
      *
-     * @return  A boolean indicates whether the joiner is accepted.
-     *
-     * @note This will be called when A well-formed JOIN_FIN.req has been received.
-     *
+     * @note There is an exiting active commissioner if @p aError != Error::kNone
+     *       and @p aExistingCommissionerId is not null.
      */
-    using CommissioningHandler = std::function<bool(const JoinerInfo & aJoinerInfo,
-                                                    const std::string &aVendorName,
-                                                    const std::string &aVendorModel,
-                                                    const std::string &aVendorSwVersion,
-                                                    const ByteArray &  aVendorStackVersion,
-                                                    const std::string &aProvisioningUrl,
-                                                    const ByteArray &  aVendorData)>;
-
-    /**
-     * The callback provided by vendor (application) to commission a joiner.
-     *
-     * @param[in]  aJoinerInfo         A joiner info indexing the commissioning joiner.
-     * @param[in]  aVendorName         A human-readable product vendor name string in utf-8 format.
-     * @param[in]  aVendorModel        A human-readable product model string.
-     * @param[in]  aVendorSwVersion    A utf-8 string that specifies the product software version.
-     * @param[in]  aVendorStackVersion A vendor stack version of fixed length (5 bytes). See section
-     *                                 8.10.3.6 of Thread spec for detail.
-     * @param[in]  aProvisioningUrl    A URL encoded as a utf-8 string provided by the Joiner
-     *                                 to communicate to the user which Commissioning application
-     *                                 is best suited to properly provision it to the appropriate
-     *                                 service. Empty if the joiner doesn't provide it.
-     * @param[in]  aVendorData         A product vendor-defined data structure to guide
-     *                                 vendor-specific provisioning. Empty if the joiner doesn't provide it.
-     *
-     * @return  A boolean indicates whether the joiner is accepted.
-     *
-     * @note This will be called when A well-formed JOIN_FIN.req has been received.
-     *
-     */
-    using CommissioningHandler = std::function<bool(const JoinerInfo & aJoinerInfo,
-                                                    const std::string &aVendorName,
-                                                    const std::string &aVendorModel,
-                                                    const std::string &aVendorSwVersion,
-                                                    const ByteArray &  aVendorStackVersion,
-                                                    const std::string &aProvisioningUrl,
-                                                    const ByteArray &  aVendorData)>;
+    using PetitionHandler = std::function<void(const std::string *aExistingCommissionerId, Error aError)>;
 
     /**
      * @brief Create an instance of the commissioner.
@@ -334,17 +331,6 @@ public:
      * @return The configuration.
      */
     virtual const Config &GetConfig() const = 0;
-
-    /**
-     * @brief Set the joiner commissioning handler.
-     *
-     * @param[in] aCommissioningHandler  A joiner commissioning handler. nullable.
-     *
-     * @note A joiner will be rejected if this handler is not provided
-     *       while the joiner requires vendor-specific provision.
-     *
-     */
-    virtual void SetCommissioningHandler(CommissioningHandler aCommissioningHandler) = 0;
 
     /**
      * @brief Start the commissioner event loop.

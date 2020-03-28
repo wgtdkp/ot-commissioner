@@ -529,12 +529,6 @@ Error CommissionerSafe::SetToken(const ByteArray &aSignedToken, const ByteArray 
     return pro.get_future().get();
 }
 
-// It is not safe to call this after starting the commissioner.
-void CommissionerSafe::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
-{
-    mImpl.SetCommissioningHandler(aCommissioningHandler);
-}
-
 void CommissionerSafe::Invoke(evutil_socket_t, short, void *aContext)
 {
     auto commissionerSafe = reinterpret_cast<CommissionerSafe *>(aContext);

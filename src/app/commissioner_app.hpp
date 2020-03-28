@@ -74,10 +74,21 @@ public:
     void              OnPanIdConflict(const std::string &aPeerAddr,
                                       const ChannelMask &aChannelMask,
                                       const uint16_t &   aPanId) override;
+
     void              OnEnergyReport(const std::string &aPeerAddr,
                                      const ChannelMask &aChannelMask,
                                      const ByteArray &  aEnergyList) override;
+
     const JoinerInfo *OnJoinerRequest(JoinerType aJoinerType, const ByteArray &aJoinerId) override;
+
+    bool OnCommissioning(const JoinerInfo & aJoinerInfo,
+                         const std::string &aVendorName,
+                         const std::string &aVendorModel,
+                         const std::string &aVendorSwVersion,
+                         const ByteArray &  aVendorStackVersion,
+                         const std::string &aProvisioningUrl,
+                         const ByteArray &  aVendorData) override;
+
     void              OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
     void              OnDatasetChanged() override;
     void              OnLogging(LogLevel aLevel, const std::string &aMsg) override;
