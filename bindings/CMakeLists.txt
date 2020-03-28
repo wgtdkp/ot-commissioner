@@ -31,7 +31,7 @@ set(JAVA_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/com/google/openthread/commissio
 
 find_package(SWIG 4.0 REQUIRED)
 find_package(Java REQUIRED)
-find_package(JNI REQUIRED)
+#find_package(JNI REQUIRED)
 
 include(UseSWIG)
 include(UseJava)
@@ -41,7 +41,7 @@ include_directories(${JNI_INCLUDE_DIRS})
 
 #set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/java/com/google/openthread/commissioner)
 
-#list(APPEND CMAKE_SWIG_FLAGS "-package;${JAVA_PACKAGE_NAME}")
+list(APPEND CMAKE_SWIG_FLAGS "-package;${JAVA_PACKAGE_NAME}")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
