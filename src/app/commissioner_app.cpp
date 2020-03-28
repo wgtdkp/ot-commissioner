@@ -84,22 +84,12 @@ exit:
 Error CommissionerApp::Init(const Config &aConfig)
 {
     Error error        = Error::kNone;
-    auto  commissioner = Commissioner::Create(aConfig, nullptr);
+    auto commissioner = Commissioner::Create(*this, aConfig);
 
     VerifyOrExit(commissioner != nullptr, error = Error::kInvalidArgs);
     SuccessOrExit(error = commissioner->Start());
 
     mCommissioner = commissioner;
-    mCommissioner->SetPanIdConflictHandler(
-        [this](const std::string *aPeerAddr, const ChannelMask *aChannelMask, const uint16_t *aPanId, Error aError) {
-            HandlePanIdConflict(aPeerAddr, aChannelMask, aPanId, aError);
-        });
-    mCommissioner->SetEnergyReportHandler(
-        [this](const std::string *aPeerAddr, const ChannelMask *aChannelMask, const ByteArray *aEnergyList,
-               Error aError) { HandleEnergyReport(aPeerAddr, aChannelMask, aEnergyList, aError); });
-    mCommissioner->SetDatasetChangedHandler([this](Error aError) { HandleDatasetChanged(aError); });
-    mCommissioner->SetJoinerInfoRequester(
-        [this](JoinerType aType, const ByteArray &aJoinerId) { return GetJoinerInfo(aType, aJoinerId); });
 
     // This is the default behavior of OpenThread on-Mesh Commissioner.
     mCommissioner->SetCommissioningHandler(DefaultCommissioningHandler);
@@ -376,18 +366,6 @@ Error CommissionerApp::DisableAllJoiners(JoinerType aType)
 
 exit:
     return error;
-}
-
-bool CommissionerApp::IsJoinerCommissioned(JoinerType aType, uint64_t aEui64)
-{
-    // This doesn't work for CCM joiners, since CCM joiners are not
-    // commissioned by the commissioner.
-    auto joiner = mJoiners.find(JoinerKey{aType, Commissioner::ComputeJoinerId(aEui64)});
-    if (joiner == mJoiners.end())
-    {
-        return false;
-    }
-    return joiner->second.mIsCommissioned;
 }
 
 Error CommissionerApp::GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJoinerType) const
@@ -1236,47 +1214,31 @@ void CommissionerApp::MergeDataset(CommissionerDataset &aDst, const Commissioner
 #undef SET_IF_PRESENT
 }
 
-void CommissionerApp::HandlePanIdConflict(const std::string *aPeerAddr,
-                                          const ChannelMask *aChannelMask,
-                                          const uint16_t *   aPanId,
-                                          Error              aError)
+void CommissionerApp::OnPanIdConflict(const std::string &aPeerAddr,
+                                      const ChannelMask &aChannelMask,
+                                      const uint16_t &   aPanId)
 {
-    // TODO(wgtdkp): logging
     (void)aPeerAddr;
-
-    if (aError != Error::kNone)
-    {
-        return;
-    }
-
     // Main thread will wait for updates to mPanIdConflicts,
     // which guarantees no concurrent access to it.
-    mPanIdConflicts[*aPanId] = *aChannelMask;
+    mPanIdConflicts[aPanId] = aChannelMask;
 }
 
-void CommissionerApp::HandleEnergyReport(const std::string *aPeerAddr,
-                                         const ChannelMask *aChannelMask,
-                                         const ByteArray *  aEnergyList,
-                                         Error              aError)
+void CommissionerApp::OnEnergyReport(const std::string &aPeerAddr,
+                                     const ChannelMask &aChannelMask,
+                                     const ByteArray &  aEnergyList)
 {
     Address addr;
-
-    SuccessOrExit(aError);
-    SuccessOrExit(addr.Set(*aPeerAddr));
+    addr.Set(aPeerAddr);
+    ASSERT(addr.IsValid());
 
     // Main thread will wait for updates to mPanIdConflicts,
     // which guarantees no concurrent access to it.
-    mEnergyReports[addr] = {*aChannelMask, *aEnergyList};
-
-exit:
-    return;
+    mEnergyReports[addr] = {aChannelMask, aEnergyList};
 }
 
-void CommissionerApp::HandleDatasetChanged(Error error)
+void CommissionerApp::OnDatasetChanged()
 {
-    // TODO(wgtdkp): logging
-    (void)error;
-
     mCommissioner->GetActiveDataset(
         [this](const ActiveOperationalDataset *aDataset, Error aError) {
             if (aError == Error::kNone)
@@ -1306,7 +1268,7 @@ void CommissionerApp::HandleDatasetChanged(Error error)
         0xFFFF);
 }
 
-const JoinerInfo *CommissionerApp::GetJoinerInfo(JoinerType aType, const ByteArray &aJoinerId)
+const JoinerInfo *CommissionerApp::OnJoinerRequest(JoinerType aType, const ByteArray &aJoinerId)
 {
     auto joinerInfo = mJoiners.find({aType, aJoinerId});
     if (joinerInfo != mJoiners.end())
@@ -1319,6 +1281,28 @@ const JoinerInfo *CommissionerApp::GetJoinerInfo(JoinerType aType, const ByteArr
         return &joinerInfo->second;
     }
     return nullptr;
+}
+
+static std::string ToString(LogLevel aLevel)
+{
+    switch (aLevel)
+    {
+    case LogLevel::kOff:
+        return "off";
+    case LogLevel::kCritical:
+        return "critical";
+    case LogLevel::kError:
+        return "error";
+    case LogLevel::kWarn:
+        return "warn";
+    case LogLevel::kInfo:
+        return "info";
+    case LogLevel::kDebug:
+        return "debug";
+    default:
+        ASSERT(false);
+        return "unknown";
+    }
 }
 
 } // namespace commissioner

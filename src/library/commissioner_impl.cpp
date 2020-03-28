@@ -138,9 +138,10 @@ JoinerInfo::JoinerInfo(JoinerType aType, uint64_t aEui64, const ByteArray &aPSKd
 {
 }
 
-CommissionerImpl::CommissionerImpl(struct event_base *aEventBase)
+CommissionerImpl::CommissionerImpl(CommissionerHandler &aHandler, struct event_base *aEventBase)
     : mState(State::kDisabled)
     , mSessionId(0)
+    , mCommissionerHandler(aHandler)
     , mEventBase(aEventBase)
     , mBaQuerier(mEventBase)
     , mKeepAliveTimer(mEventBase, [this](Timer &aTimer) { SendKeepAlive(aTimer); })
@@ -155,10 +156,6 @@ CommissionerImpl::CommissionerImpl(struct event_base *aEventBase)
     , mResourcePanIdConflict(uri::kMgmtPanidConflict,
                              [this](const coap::Request &aRequest) { HandlePanIdConflict(aRequest); })
     , mResourceEnergyReport(uri::kMgmtEdReport, [this](const coap::Request &aRequest) { HandleEnergyReport(aRequest); })
-    , mDatasetChangedHandler(nullptr)
-    , mPanIdConflictHandler(nullptr)
-    , mEnergyReportHandler(nullptr)
-    , mJoinerInfoRequester(nullptr)
     , mCommissioningHandler(nullptr)
 {
     ASSERT(mBrClient.AddResource(mResourceUdpRx) == Error::kNone);
@@ -261,11 +258,6 @@ void CommissionerImpl::LoggingConfig()
 const Config &CommissionerImpl::GetConfig() const
 {
     return mConfig;
-}
-
-void CommissionerImpl::SetJoinerInfoRequester(JoinerInfoRequester aJoinerInfoRequester)
-{
-    mJoinerInfoRequester = aJoinerInfoRequester;
 }
 
 void CommissionerImpl::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
@@ -1080,21 +1072,6 @@ Error CommissionerImpl::SetToken(const ByteArray &aSignedToken, const ByteArray 
         return Error::kInvalidState;
     }
     return mTokenManager.SetToken(aSignedToken, aSignerCert);
-}
-
-void CommissionerImpl::SetDatasetChangedHandler(ErrorHandler aHandler)
-{
-    mDatasetChangedHandler = aHandler;
-}
-
-void CommissionerImpl::SetPanIdConflictHandler(PanIdConflictHandler aHandler)
-{
-    mPanIdConflictHandler = aHandler;
-}
-
-void CommissionerImpl::SetEnergyReportHandler(EnergyReportHandler aHandler)
-{
-    mEnergyReportHandler = aHandler;
 }
 
 void CommissionerImpl::SendPetition(PetitionHandler aHandler)
@@ -1932,10 +1909,7 @@ void CommissionerImpl::HandleDatasetChanged(const coap::Request &aRequest)
 
     mProxyClient.SendEmptyChanged(aRequest);
 
-    if (mDatasetChangedHandler != nullptr)
-    {
-        mDatasetChangedHandler(Error::kNone);
-    }
+    mCommissionerHandler.OnDatasetChanged();
 }
 
 void CommissionerImpl::HandlePanIdConflict(const coap::Request &aRequest)
@@ -1963,20 +1937,12 @@ void CommissionerImpl::HandlePanIdConflict(const coap::Request &aRequest)
     }
 
     error = Error::kNone;
-    if (mPanIdConflictHandler != nullptr)
-    {
-        mPanIdConflictHandler(&peerAddr, &channelMask, &panId, Error::kNone);
-    }
+    mCommissionerHandler.OnPanIdConflict(peerAddr, channelMask, panId);
 
 exit:
     if (error != Error::kNone)
     {
         LOG_WARN("handle MGMT_PANID_CONFLICT.ans from {} failed: {}", peerAddr, ErrorToString(error));
-
-        if (mPanIdConflictHandler != nullptr)
-        {
-            mPanIdConflictHandler(nullptr, nullptr, nullptr, error);
-        }
     }
 }
 
@@ -2005,20 +1971,12 @@ void CommissionerImpl::HandleEnergyReport(const coap::Request &aRequest)
     }
 
     error = Error::kNone;
-    if (mEnergyReportHandler != nullptr)
-    {
-        mEnergyReportHandler(&peerAddr, &channelMask, &energyList, Error::kNone);
-    }
+    mCommissionerHandler.OnEnergyReport(peerAddr, channelMask, energyList);
 
 exit:
     if (error != Error::kNone)
     {
         LOG_WARN("handle MGMT_ED_REPORT.ans from {} failed: {}", peerAddr, ErrorToString(error));
-
-        if (mEnergyReportHandler != nullptr)
-        {
-            mEnergyReportHandler(nullptr, nullptr, nullptr, error);
-        }
     }
 }
 
@@ -2086,16 +2044,10 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
     LOG_DEBUG("received RLY_RX.ntf: joinerIID={}, joinerRouterLocator={}, length={}", utils::Hex(joinerIid),
               joinerRouterLocator, dtlsRecords.size());
 
-    if (mJoinerInfoRequester == nullptr)
-    {
-        LOG_WARN("joiner info requester is nil, give up");
-        ExitNow();
-    }
-    else
     {
         auto joinerId = joinerIid;
         joinerId[0] ^= kLocalExternalAddrMask;
-        joinerInfo = mJoinerInfoRequester(JoinerType::kMeshCoP, joinerId);
+        joinerInfo = mCommissionerHandler.OnJoinerRequest(JoinerType::kMeshCoP, joinerId);
         if (joinerInfo == nullptr)
         {
             LOG_INFO("joiner(IID={}) is disabled", utils::Hex(joinerIid));

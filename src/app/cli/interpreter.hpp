@@ -110,7 +110,7 @@ private:
     static std::string       ToString(const SecurityPolicy &aSecurityPolicy);
     static std::string       ToString(const EnergyReport &aReport);
     static std::string       ToString(const BorderAgent &aBorderAgent);
-    static std::string       ToString(const BorderAgent::State &aState);
+    static std::string       ToString(const BorderAgentState &aState);
     static std::string       BaConnModeToString(uint32_t aConnMode);
     static std::string       BaThreadIfStatusToString(uint32_t aIfStatus);
     static std::string       BaAvailabilityToString(uint32_t aAvailability);

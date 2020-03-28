@@ -38,8 +38,8 @@
 
 #include <string>
 
-#include "commissioner/defines.hpp"
-#include "commissioner/error.hpp"
+#include "defines.hpp"
+#include "error.hpp"
 
 namespace ot {
 
@@ -163,7 +163,7 @@ struct Timestamp
     uint64_t Encode() const;
 };
 
-static_assert(sizeof(Timestamp) == sizeof(uint64_t), "wrong timestamp size");
+// static_assert(sizeof(Timestamp) == sizeof(uint64_t), "wrong timestamp size");
 
 /**
  * A Channel includes ChannelPage and ChannelNumber.

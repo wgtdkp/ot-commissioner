@@ -44,6 +44,19 @@ namespace ot {
 namespace commissioner {
 
 /**
+ * The structures represent Border Agent state.
+ *
+ */
+struct BorderAgentState
+{
+    uint32_t mConnectionMode : 3;
+    uint32_t mThreadIfStatus : 2;
+    uint32_t mAvailability : 2;
+    uint32_t mBbrIsActive : 1;
+    uint32_t mBbrIsPrimary : 1;
+};
+
+/**
  * The definition of Border Agent discovered by Commissioner.
  */
 struct BorderAgent
@@ -67,14 +80,7 @@ struct BorderAgent
     /**
      * State bitmap. Mandatory.
      */
-    struct State
-    {
-        uint32_t mConnectionMode : 3;
-        uint32_t mThreadIfStatus : 2;
-        uint32_t mAvailability : 2;
-        uint32_t mBbrIsActive : 1;
-        uint32_t mBbrIsPrimary : 1;
-    } mState;
+    BorderAgentState mState;
 
     /**
      * Network Name in the PSKc computation used for Commissioner Authentication.

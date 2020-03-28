@@ -46,22 +46,15 @@ namespace ot {
 
 namespace commissioner {
 
-std::shared_ptr<Commissioner> Commissioner::Create(const Config &aConfig, struct event_base *aEventBase)
+std::shared_ptr<Commissioner> Commissioner::Create(CommissionerHandler &aHandler,
+                                                   const Config &       aConfig)
 {
-    if (aEventBase == nullptr)
-    {
-        auto comm = std::make_shared<CommissionerSafe>();
-        return (comm->Init(aConfig) == Error::kNone) ? comm : nullptr;
-    }
-    else
-    {
-        auto comm = std::make_shared<CommissionerImpl>(aEventBase);
-        return (comm->Init(aConfig) == Error::kNone) ? comm : nullptr;
-    }
+    auto comm = std::make_shared<CommissionerSafe>(aHandler);
+    return (comm->Init(aConfig) == Error::kNone) ? comm : nullptr;
 }
 
-CommissionerSafe::CommissionerSafe()
-    : mImpl(mEventBase.Get())
+CommissionerSafe::CommissionerSafe(CommissionerHandler &aHandler)
+    : mImpl(aHandler, mEventBase.Get())
     , mEventThread(nullptr)
 {
 }
@@ -537,33 +530,9 @@ Error CommissionerSafe::SetToken(const ByteArray &aSignedToken, const ByteArray 
 }
 
 // It is not safe to call this after starting the commissioner.
-void CommissionerSafe::SetJoinerInfoRequester(JoinerInfoRequester aJoinerInfoRequester)
-{
-    mImpl.SetJoinerInfoRequester(aJoinerInfoRequester);
-}
-
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
 {
     mImpl.SetCommissioningHandler(aCommissioningHandler);
-}
-
-// It is not safe to call this after starting the commissioner.
-void CommissionerSafe::SetDatasetChangedHandler(ErrorHandler aHandler)
-{
-    mImpl.SetDatasetChangedHandler(aHandler);
-}
-
-// It is not safe to call this after starting the commissioner.
-void CommissionerSafe::SetPanIdConflictHandler(PanIdConflictHandler aHandler)
-{
-    mImpl.SetPanIdConflictHandler(aHandler);
-}
-
-// It is not safe to call this after starting the commissioner.
-void CommissionerSafe::SetEnergyReportHandler(EnergyReportHandler aHandler)
-{
-    mImpl.SetEnergyReportHandler(aHandler);
 }
 
 void CommissionerSafe::Invoke(evutil_socket_t, short, void *aContext)

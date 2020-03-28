@@ -61,7 +61,7 @@ struct EnergyReport
 };
 using EnergyReportMap = std::map<Address, EnergyReport>;
 
-class CommissionerApp
+class CommissionerApp : public CommissionerHandler
 {
 public:
     using MilliSeconds = std::chrono::milliseconds;
@@ -69,6 +69,18 @@ public:
 
     static std::shared_ptr<CommissionerApp> Create(const Config &aConfig);
     ~CommissionerApp() = default;
+
+    // Handle commissioner events.
+    void              OnPanIdConflict(const std::string &aPeerAddr,
+                                      const ChannelMask &aChannelMask,
+                                      const uint16_t &   aPanId) override;
+    void              OnEnergyReport(const std::string &aPeerAddr,
+                                     const ChannelMask &aChannelMask,
+                                     const ByteArray &  aEnergyList) override;
+    const JoinerInfo *OnJoinerRequest(JoinerType aJoinerType, const ByteArray &aJoinerId) override;
+    void              OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
+    void              OnDatasetChanged() override;
+    void              OnLogging(LogLevel aLevel, const std::string &aMsg) override;
 
     // Discover Border Agent on link-local network.
     Error Discover();
@@ -111,9 +123,6 @@ public:
     Error DisableJoiner(JoinerType aType, uint64_t aEui64);
     Error EnableAllJoiners(JoinerType aType, const ByteArray &aPSKd, const std::string &aProvisioningUrl);
     Error DisableAllJoiners(JoinerType aType);
-
-    // Currently, for only non-CCM joiners.
-    bool IsJoinerCommissioned(JoinerType aType, uint64_t aEui64);
 
     Error GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJoinerType) const;
     Error SetJoinerUdpPort(JoinerType aType, uint16_t aUdpPort);
@@ -244,15 +253,6 @@ private:
     ByteArray mSignedToken;
 
 private:
-    void HandlePanIdConflict(const std::string *aPeerAddr,
-                             const ChannelMask *aChannelMask,
-                             const uint16_t *   aPanId,
-                             Error              aError);
-    void HandleEnergyReport(const std::string *aPeerAddr,
-                            const ChannelMask *aChannelMask,
-                            const ByteArray *  aEnergyList,
-                            Error              aError);
-
     std::map<uint16_t, ChannelMask> mPanIdConflicts;
     EnergyReportMap                 mEnergyReports;
 

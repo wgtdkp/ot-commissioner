@@ -34,6 +34,8 @@
 #ifndef OT_COMM_LIBRARY_LOGGING_HPP_
 #define OT_COMM_LIBRARY_LOGGING_HPP_
 
+#include <functional>
+
 #include <fmt/format.h>
 
 #include <commissioner/commissioner.hpp>
@@ -53,6 +55,8 @@
 namespace ot {
 
 namespace commissioner {
+
+using LogWriter = std::function<void(LogLevel, const std::string &)>;
 
 // TODO(wgtdkp): add json format. This is useful for certification.
 

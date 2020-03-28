@@ -68,7 +68,7 @@ class CommissionerImpl : public Commissioner
     friend class CommissioningSession;
 
 public:
-    explicit CommissionerImpl(struct event_base *aEventBase);
+    explicit CommissionerImpl(CommissionerHandler &aHandler, struct event_base *aEventBase);
 
     CommissionerImpl(const CommissionerImpl &aCommissioner) = delete;
     const CommissionerImpl &operator=(const CommissionerImpl &aCommissioner) = delete;
@@ -79,7 +79,6 @@ public:
 
     const Config &GetConfig() const override;
 
-    void SetJoinerInfoRequester(JoinerInfoRequester aJoinerInfoRequester) override;
     void SetCommissioningHandler(CommissioningHandler aCommissioningHandler) override;
 
     uint16_t GetSessionId() const override;
@@ -196,12 +195,6 @@ public:
 
     Error SetToken(const ByteArray &aSignedToken, const ByteArray &aSignerCert) override;
 
-    void SetDatasetChangedHandler(ErrorHandler aHandler) override;
-
-    void SetPanIdConflictHandler(PanIdConflictHandler aHandler) override;
-
-    void SetEnergyReportHandler(EnergyReportHandler aHandler) override;
-
     struct event_base *GetEventBase() { return mEventBase; }
 
 private:
@@ -270,7 +263,8 @@ private:
     static constexpr uint32_t kMinKeepAliveInterval = 30;
     static constexpr uint32_t kMaxKeepAliveInterval = 45;
 
-    struct event_base *mEventBase;
+    CommissionerHandler &mCommissionerHandler;
+    struct event_base *  mEventBase;
 
     Config mConfig;
 
@@ -293,11 +287,7 @@ private:
     coap::Resource       mResourceDatasetChanged;
     coap::Resource       mResourcePanIdConflict;
     coap::Resource       mResourceEnergyReport;
-    ErrorHandler         mDatasetChangedHandler;
-    PanIdConflictHandler mPanIdConflictHandler;
-    EnergyReportHandler  mEnergyReportHandler;
 
-    JoinerInfoRequester  mJoinerInfoRequester;
     CommissioningHandler mCommissioningHandler;
 };
 

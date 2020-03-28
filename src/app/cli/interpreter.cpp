@@ -1211,7 +1211,7 @@ std::string Interpreter::ToString(const BorderAgent &aBorderAgent)
     return ret;
 }
 
-std::string Interpreter::ToString(const BorderAgent::State &aState)
+std::string Interpreter::ToString(const BorderAgentState &aState)
 {
     std::string ret;
     ret += "State.ConnectionMode=" + std::to_string(aState.mConnectionMode) + "(" +

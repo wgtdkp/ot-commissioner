@@ -65,4 +65,10 @@ if (BUILD_SHARED_LIBS)
     )
 endif()
 
+if (BUILD_SHARED_LIBS)
+    install(TARGETS commissioner-app
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib)
+endif()
+
 add_subdirectory(cli)
