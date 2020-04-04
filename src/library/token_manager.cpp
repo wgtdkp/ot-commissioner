@@ -352,18 +352,24 @@ Error TokenManager::PrepareSigningContent(ByteArray &aContent, const coap::Messa
     Error         error = Error::kNone;
     coap::Message message{aMessage.GetType(), aMessage.GetCode()};
     tlv::TlvSet   tlvSet;
-    std::string   uri;
+    std::string   signingUri;
     bool          isActiveSet  = false;
     bool          isPendingSet = false;
     ByteArray     content;
 
-    VerifyOrExit(aMessage.GetUriPath(uri) == Error::kNone, error = Error::kInvalidArgs);
+    VerifyOrExit(aMessage.GetUriPath(signingUri) == Error::kNone, error = Error::kInvalidArgs);
 
-    isActiveSet  = uri == uri::kMgmtActiveSet;
-    isPendingSet = uri == uri::kMgmtPendingSet;
+    isActiveSet  = signingUri == uri::kMgmtActiveSet;
+    isPendingSet = signingUri == uri::kMgmtPendingSet;
+
+    if (signingUri == uri::kPetitioning) {
+        signingUri = uri::kLeaderPetitioning;
+    } else if (signingUri == uri::kKeepAlive) {
+        signingUri = uri::kLeaderKeepAlive;
+    }
 
     // Prepare serialized URI
-    SuccessOrExit(error = message.SetUriPath(uri));
+    SuccessOrExit(error = message.SetUriPath(signingUri));
     SuccessOrExit(error = message.Serialize(content));
     content.erase(content.begin(), content.begin() + message.GetHeaderLength());
 
