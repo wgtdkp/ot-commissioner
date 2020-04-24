@@ -67,7 +67,6 @@ exit:
 
 CommissionerSafe::CommissionerSafe()
     : mImpl(mEventBase.Get())
-    , mEventThread(nullptr)
 {
 }
 
@@ -569,9 +568,9 @@ Error CommissionerSafe::StartEventLoopThread(void)
 {
     Error error = Error::kNone;
 
-    VerifyOrExit(mEventThread == nullptr, error = Error::kAlready);
+    VerifyOrExit(!mEventThread.joinable(), error = Error::kAlready);
 
-    mEventThread = std::make_shared<std::thread>([this]() {
+    mEventThread = std::thread([this]() {
         LOG_INFO("event loop started in background thread");
         event_base_loop(mEventBase.Get(), EVLOOP_NO_EXIT_ON_EMPTY);
     });
@@ -582,12 +581,23 @@ exit:
 
 void CommissionerSafe::StopEventLoopThread(void)
 {
-    if (mEventThread && mEventThread->joinable())
-    {
+    std::promise<void> pro;
+
+    VerifyOrExit(mEventThread.joinable());
+
+    // Send `Stop` to the event loop to break it from inside.
+    // This makes sure the event loop has been started when we
+    // trying to break it.
+    PushAsyncRequest([&pro, this]() {
         event_base_loopbreak(mEventBase.Get());
-        mEventThread->join();
-        mEventThread = nullptr;
-    }
+        pro.set_value();
+    });
+
+    pro.get_future().wait();
+
+    mEventThread.join();
+
+exit:
     return;
 }
 
