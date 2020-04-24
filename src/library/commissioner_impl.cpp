@@ -165,17 +165,6 @@ CommissionerImpl::CommissionerImpl(struct event_base *aEventBase)
     ASSERT(mProxyClient.AddResource(mResourceEnergyReport) == Error::kNone);
 }
 
-CommissionerImpl::~CommissionerImpl()
-{
-    Stop();
-
-    mProxyClient.RemoveResource(mResourceEnergyReport);
-    mProxyClient.RemoveResource(mResourcePanIdConflict);
-    mProxyClient.RemoveResource(mResourceDatasetChanged);
-    mBrClient.RemoveResource(mResourceRlyRx);
-    mBrClient.RemoveResource(mResourceUdpRx);
-}
-
 Error CommissionerImpl::Init(const Config &aConfig)
 {
     Error error = Error::kFailed;
@@ -268,19 +257,6 @@ void CommissionerImpl::SetJoinerInfoRequester(JoinerInfoRequester aJoinerInfoReq
 void CommissionerImpl::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
 {
     mCommissioningHandler = aCommissioningHandler;
-}
-
-Error CommissionerImpl::Start()
-{
-    LOG_INFO("event loop started in background thread");
-    event_base_loop(mEventBase, EVLOOP_NO_EXIT_ON_EMPTY);
-    return Error::kNone;
-}
-
-// Stop the commissioner event loop.
-void CommissionerImpl::Stop()
-{
-    event_base_loopbreak(mEventBase);
 }
 
 void CommissionerImpl::Petition(PetitionHandler aHandler, const std::string &aAddr, uint16_t aPort)

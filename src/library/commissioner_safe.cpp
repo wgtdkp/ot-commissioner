@@ -45,18 +45,24 @@ namespace ot {
 
 namespace commissioner {
 
-std::shared_ptr<Commissioner> Commissioner::Create(const Config &aConfig, struct event_base *aEventBase)
+Error Commissioner::Create(std::shared_ptr<Commissioner> &aCommissioner, const Config &aConfig, struct event_base *aEventBase)
 {
+    Error error;
     if (aEventBase == nullptr)
     {
         auto comm = std::make_shared<CommissionerSafe>();
-        return (comm->Init(aConfig) == Error::kNone) ? comm : nullptr;
+        SuccessOrExit(error = comm->Init(aConfig));
+        aCommissioner = comm;
     }
     else
     {
         auto comm = std::make_shared<CommissionerImpl>(aEventBase);
-        return (comm->Init(aConfig) == Error::kNone) ? comm : nullptr;
+        SuccessOrExit(error = comm->Init(aConfig));
+        aCommissioner = comm;
     }
+
+exit:
+    return error;
 }
 
 CommissionerSafe::CommissionerSafe()
@@ -77,44 +83,23 @@ Error CommissionerSafe::Init(const Config &aConfig)
 
     VerifyOrExit(event_assign(&mInvokeEvent, mEventBase.Get(), -1, EV_PERSIST, Invoke, this) == 0);
     VerifyOrExit(event_add(&mInvokeEvent, nullptr) == 0);
+
+    // Do not propogate the returned error.
+    SuccessOrExit(StartEventLoopThread());
+
 exit:
     return error;
 }
 
 CommissionerSafe::~CommissionerSafe()
 {
-    Stop();
+    StopEventLoopThread();
 }
 
 const Config &CommissionerSafe::GetConfig() const
 {
     // Config is read-only, no synchronization is needed.
     return mImpl.GetConfig();
-}
-
-Error CommissionerSafe::Start()
-{
-    Error error = Error::kNone;
-
-    VerifyOrExit(mEventThread == nullptr, error = Error::kAlready);
-
-    mEventThread = std::make_shared<std::thread>([this]() { IgnoreError(mImpl.Start()); });
-
-exit:
-    return error;
-}
-
-// Stop the commissioner running in background.
-void CommissionerSafe::Stop()
-{
-    mImpl.Stop();
-
-    if (mEventThread && mEventThread->joinable())
-    {
-        mEventThread->join();
-        mEventThread = nullptr;
-    }
-    return;
 }
 
 void CommissionerSafe::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort)
@@ -578,6 +563,32 @@ CommissionerSafe::AsyncRequest CommissionerSafe::PopAsyncRequest()
         return ret;
     }
     return nullptr;
+}
+
+Error CommissionerSafe::StartEventLoopThread(void)
+{
+    Error error = Error::kNone;
+
+    VerifyOrExit(mEventThread == nullptr, error = Error::kAlready);
+
+    mEventThread = std::make_shared<std::thread>([this]() {
+        LOG_INFO("event loop started in background thread");
+        event_base_loop(mEventBase.Get(), EVLOOP_NO_EXIT_ON_EMPTY);
+    });
+
+exit:
+    return error;
+}
+
+void CommissionerSafe::StopEventLoopThread(void)
+{
+    if (mEventThread && mEventThread->joinable())
+    {
+        event_base_loopbreak(mEventBase.Get());
+        mEventThread->join();
+        mEventThread = nullptr;
+    }
+    return;
 }
 
 CommissionerSafe::EventBaseHolder::EventBaseHolder()
