@@ -136,32 +136,49 @@ void CommissionerSafe::Disconnect()
     PushAsyncRequest([=]() { mImpl.Disconnect(); });
 }
 
-/**
- * FIXME(wgtdkp): this is not thread safe.
- */
 uint16_t CommissionerSafe::GetSessionId() const
 {
-    return mImpl.GetSessionId();
+    std::promise<uint16_t> pro;
+
+    PushAsyncRequest([&pro, this]() { pro.set_value(mImpl.GetSessionId()); });
+
+    return pro.get_future().get();
 }
 
 State CommissionerSafe::GetState() const
 {
-    return mImpl.GetState();
+    std::promise<State> pro;
+
+    PushAsyncRequest([&pro, this]() { pro.set_value(mImpl.GetState()); });
+
+    return pro.get_future().get();
 }
 
 bool CommissionerSafe::IsActive() const
 {
-    return mImpl.IsActive();
+    std::promise<bool> pro;
+
+    PushAsyncRequest([&pro, this]() { pro.set_value(mImpl.IsActive()); });
+
+    return pro.get_future().get();
 }
 
 bool CommissionerSafe::IsCcmMode() const
 {
-    return mImpl.IsCcmMode();
+    std::promise<bool> pro;
+
+    PushAsyncRequest([&pro, this]() { pro.set_value(mImpl.IsCcmMode()); });
+
+    return pro.get_future().get();
 }
 
-const std::string &CommissionerSafe::GetDomainName() const
+std::string CommissionerSafe::GetDomainName() const
 {
-    return mImpl.GetDomainName();
+    std::promise<std::string> pro;
+
+    PushAsyncRequest([&pro, this]() { pro.set_value(mImpl.GetDomainName()); });
+
+    return pro.get_future().get();
 }
 
 void CommissionerSafe::AbortRequests()
@@ -515,34 +532,57 @@ Error CommissionerSafe::SetToken(const ByteArray &aSignedToken, const ByteArray 
     return pro.get_future().get();
 }
 
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetJoinerInfoRequester(JoinerInfoRequester aJoinerInfoRequester)
 {
-    mImpl.SetJoinerInfoRequester(aJoinerInfoRequester);
+    std::promise<void> pro;
+
+    PushAsyncRequest([&]() {
+        mImpl.SetJoinerInfoRequester(aJoinerInfoRequester);
+        pro.set_value();
+    });
+
+    return pro.get_future().get();
 }
 
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetCommissioningHandler(CommissioningHandler aCommissioningHandler)
 {
-    mImpl.SetCommissioningHandler(aCommissioningHandler);
+    std::promise<void> pro;
+
+    PushAsyncRequest([&]() {
+        mImpl.SetCommissioningHandler(aCommissioningHandler);
+        pro.set_value();
+    });
+
+    return pro.get_future().get();
 }
 
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetDatasetChangedHandler(ErrorHandler aHandler)
 {
     mImpl.SetDatasetChangedHandler(aHandler);
 }
 
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetPanIdConflictHandler(PanIdConflictHandler aHandler)
 {
-    mImpl.SetPanIdConflictHandler(aHandler);
+    std::promise<void> pro;
+
+    PushAsyncRequest([&]() {
+        mImpl.SetPanIdConflictHandler(aHandler);
+        pro.set_value();
+    });
+
+    return pro.get_future().get();
 }
 
-// It is not safe to call this after starting the commissioner.
 void CommissionerSafe::SetEnergyReportHandler(EnergyReportHandler aHandler)
 {
-    mImpl.SetEnergyReportHandler(aHandler);
+    std::promise<void> pro;
+
+    PushAsyncRequest([&]() {
+        mImpl.SetEnergyReportHandler(aHandler);
+        pro.set_value();
+    });
+
+    return pro.get_future().get();
 }
 
 void CommissionerSafe::Invoke(evutil_socket_t, short, void *aContext)
@@ -557,7 +597,7 @@ void CommissionerSafe::Invoke(evutil_socket_t, short, void *aContext)
     }
 }
 
-void CommissionerSafe::PushAsyncRequest(AsyncRequest &&aAsyncRequest)
+void CommissionerSafe::PushAsyncRequest(AsyncRequest &&aAsyncRequest) const
 {
     std::lock_guard<std::mutex> _(mInvokeMutex);
 

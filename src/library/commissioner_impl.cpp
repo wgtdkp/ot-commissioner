@@ -357,7 +357,7 @@ bool CommissionerImpl::IsCcmMode() const
     return mConfig.mEnableCcm;
 }
 
-const std::string &CommissionerImpl::GetDomainName() const
+std::string CommissionerImpl::GetDomainName() const
 {
     return mConfig.mDomainName;
 }

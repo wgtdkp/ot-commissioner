@@ -86,7 +86,7 @@ public:
 
     bool IsCcmMode() const override;
 
-    const std::string &GetDomainName() const override;
+    std::string GetDomainName() const override;
 
     void AbortRequests() override;
 
@@ -200,7 +200,7 @@ private:
 
     static void Invoke(evutil_socket_t aFd, short aFlags, void *aContext);
 
-    void         PushAsyncRequest(AsyncRequest &&aAsyncRequest);
+    void         PushAsyncRequest(AsyncRequest &&aAsyncRequest) const;
     AsyncRequest PopAsyncRequest();
 
 private:
@@ -223,13 +223,13 @@ private:
     // and user thread. It will be activated by user calls
     // and the callback will be run in mEventThread to do the
     // actual work.
-    struct event mInvokeEvent;
+    mutable struct event mInvokeEvent;
 
     // Used for synchronization with event loop in background.
-    std::mutex mInvokeMutex;
+    mutable std::mutex mInvokeMutex;
 
     // The schedule queue of all async requests.
-    std::queue<AsyncRequest> mAsyncRequestQueue;
+    mutable std::queue<AsyncRequest> mAsyncRequestQueue;
 
     // The even loop thread running in background.
     std::shared_ptr<std::thread> mEventThread;

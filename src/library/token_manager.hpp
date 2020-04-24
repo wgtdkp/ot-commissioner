@@ -60,8 +60,6 @@ public:
 
     const ByteArray &GetToken() const { return mSignedToken; }
 
-    const std::string &GetDomainName() const;
-
     void AbortRequests() { mRegistrarClient.AbortRequests(); }
 
     // Request Commissioner Token from registrar.

@@ -400,7 +400,7 @@ public:
      *
      * @note The return value is meaningful only in CCM mode.
      */
-    virtual const std::string &GetDomainName() const = 0;
+    virtual std::string GetDomainName() const = 0;
 
     /**
      * @brief Abort all outstanding requests.

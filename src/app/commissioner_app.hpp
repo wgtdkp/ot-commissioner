@@ -197,11 +197,11 @@ public:
      * Others
      */
     // Get current domain name.
-    const std::string &GetDomainName() const;
-    Error              GetPrimaryBbrAddr(std::string &aAddr);
-    const ByteArray &  GetToken() const;
-    Error              RequestToken(const std::string &aAddr, uint16_t aPort);
-    Error              SetToken(const ByteArray &aSignedToken, const ByteArray &aSignerCert);
+    std::string      GetDomainName() const;
+    Error            GetPrimaryBbrAddr(std::string &aAddr);
+    const ByteArray &GetToken() const;
+    Error            RequestToken(const std::string &aAddr, uint16_t aPort);
+    Error            SetToken(const ByteArray &aSignedToken, const ByteArray &aSignerCert);
 
 private:
     CommissionerApp() = default;

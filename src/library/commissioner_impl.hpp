@@ -89,7 +89,7 @@ public:
 
     bool IsCcmMode() const override;
 
-    const std::string &GetDomainName() const override;
+    std::string GetDomainName() const override;
 
     void AbortRequests() override;
 

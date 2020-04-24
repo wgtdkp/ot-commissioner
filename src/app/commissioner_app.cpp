@@ -996,7 +996,7 @@ const EnergyReportMap &CommissionerApp::GetAllEnergyReports() const
     return mEnergyReports;
 }
 
-const std::string &CommissionerApp::GetDomainName() const
+std::string CommissionerApp::GetDomainName() const
 {
     return mCommissioner->GetDomainName();
 }
