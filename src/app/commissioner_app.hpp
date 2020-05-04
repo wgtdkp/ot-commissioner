@@ -62,6 +62,36 @@ struct EnergyReport
 };
 using EnergyReportMap = std::map<Address, EnergyReport>;
 
+/**
+ * @brief Enumeration of Joiner Type for steering.
+ *
+ */
+enum class JoinerType
+{
+    kMeshCoP = 0, ///< Conventional non-CCM joiner.
+    kAE,          ///< CCM AE joiner.
+    kNMKP         ///< CCM NMKP joiner.
+};
+
+/**
+ * @brief Definition of joiner information.
+ */
+struct JoinerInfo
+{
+    JoinerType mType;
+
+    // If the value is all-zeros, it represents for all joiners of this type.
+    uint64_t mEui64; ///< The IEEE EUI-64 value.
+
+    // Valid only if mType is kMeshCoP.
+    std::string mPSKd; ///< The pre-shared device key.
+
+    // Valid only if mType is kMeshCoP.
+    std::string mProvisioningUrl;
+
+    JoinerInfo(JoinerType aType, uint64_t aEui64, const std::string &aPSKd, const std::string &aProvisioningUrl);
+};
+
 class CommissionerApp : public CommissionerHandler
 {
 public:
@@ -80,17 +110,18 @@ public:
                                      const ChannelMask &aChannelMask,
                                      const ByteArray &  aEnergyList) override;
 
-    const JoinerInfo *OnJoinerRequest(JoinerType aJoinerType, const ByteArray &aJoinerId) override;
+    Error OnJoinerRequest(std::string &aPSKd, const ByteArray &aJoinerId) override;
 
-    bool OnCommissioning(const JoinerInfo & aJoinerInfo,
-                         const std::string &aVendorName,
-                         const std::string &aVendorModel,
-                         const std::string &aVendorSwVersion,
-                         const ByteArray &  aVendorStackVersion,
-                         const std::string &aProvisioningUrl,
-                         const ByteArray &  aVendorData) override;
+    void OnJoinerConnected(const ByteArray &aJoinerId, Error aError) override;
 
-    void              OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
+    bool OnJoinerFinalize(const ByteArray &  aJoinerId,
+                          const std::string &aVendorName,
+                          const std::string &aVendorModel,
+                          const std::string &aVendorSwVersion,
+                          const ByteArray &  aVendorStackVersion,
+                          const std::string &aProvisioningUrl,
+                          const ByteArray &  aVendorData) override;
+
     void              OnDatasetChanged() override;
 
     // Discover Border Agent on link-local network.
@@ -129,10 +160,10 @@ public:
     Error GetSteeringData(ByteArray &aSteeringData, JoinerType aJoinerType) const;
     Error EnableJoiner(JoinerType         aType,
                        uint64_t           aEui64,
-                       const ByteArray &  aPSKd            = {},
+                       const std::string &  aPSKd            = {},
                        const std::string &aProvisioningUrl = {});
     Error DisableJoiner(JoinerType aType, uint64_t aEui64);
-    Error EnableAllJoiners(JoinerType aType, const ByteArray &aPSKd, const std::string &aProvisioningUrl);
+    Error EnableAllJoiners(JoinerType aType, const std::string &aPSKd, const std::string &aProvisioningUrl);
     Error DisableAllJoiners(JoinerType aType);
 
     Error GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJoinerType) const;

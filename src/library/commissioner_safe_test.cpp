@@ -40,43 +40,16 @@ namespace ot {
 
 namespace commissioner {
 
-class DummyHandler : public CommissionerHandler
-{
-public:
-    void OnPanIdConflict(const std::string &aPeerAddr, const ChannelMask &aChannelMask, const uint16_t &aPanId) override
-    {
-        (void)aPeerAddr;
-        (void)aChannelMask;
-        (void)aPanId;
-    }
-    void OnEnergyReport(const std::string &aPeerAddr,
-                        const ChannelMask &aChannelMask,
-                        const ByteArray &  aEnergyList) override
-    {
-        (void)aPeerAddr;
-        (void)aChannelMask;
-        (void)aEnergyList;
-    }
-    const JoinerInfo *OnJoinerRequest(JoinerType aJoinerType, const ByteArray &aJoinerId) override
-    {
-        (void)aJoinerType;
-        (void)aJoinerId;
-        return nullptr;
-    }
-    void OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
-    void OnDatasetChanged() override {}
-};
-
 TEST_CASE("stop-immediately-after-starting", "[commissioner]")
 {
-    DummyHandler handler;
+    CommissionerHandler dummyHandler;
 
     Config config;
     config.mEnableCcm = false;
     config.mPSKc = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 
     // This creates an CommissionerSafe instance.
-    auto commissioner = Commissioner::Create(handler, config);
+    auto commissioner = Commissioner::Create(dummyHandler, config);
     REQUIRE(commissioner != nullptr);
 }
 

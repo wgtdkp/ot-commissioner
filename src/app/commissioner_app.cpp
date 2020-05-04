@@ -44,6 +44,14 @@ namespace ot {
 
 namespace commissioner {
 
+JoinerInfo::JoinerInfo(JoinerType aType, uint64_t aEui64, const std::string &aPSKd, const std::string &aProvisioningUrl)
+    : mType(aType)
+    , mEui64(aEui64)
+    , mPSKd(aPSKd)
+    , mProvisioningUrl(aProvisioningUrl)
+{
+}
+
 std::shared_ptr<CommissionerApp> CommissionerApp::Create(const Config &aConfig)
 {
     Error error = Error::kNone;
@@ -210,7 +218,7 @@ exit:
 
 Error CommissionerApp::EnableJoiner(JoinerType         aType,
                                     uint64_t           aEui64,
-                                    const ByteArray &  aPSKd,
+                                    const std::string &aPSKd,
                                     const std::string &aProvisioningUrl)
 {
     Error error       = Error::kNone;
@@ -268,7 +276,7 @@ exit:
     return error;
 }
 
-Error CommissionerApp::EnableAllJoiners(JoinerType aType, const ByteArray &aPSKd, const std::string &aProvisioningUrl)
+Error CommissionerApp::EnableAllJoiners(JoinerType aType, const std::string &aPSKd, const std::string &aProvisioningUrl)
 {
     Error     error = Error::kNone;
     ByteArray joinerId;
@@ -1210,8 +1218,7 @@ void CommissionerApp::OnEnergyReport(const std::string &aPeerAddr,
                                      const ByteArray &  aEnergyList)
 {
     Address addr;
-    addr.Set(aPeerAddr);
-    ASSERT(addr.IsValid());
+    ASSERT(addr.Set(aPeerAddr) == Error::kNone);
 
     // Main thread will wait for updates to mPanIdConflicts,
     // which guarantees no concurrent access to it.
@@ -1249,28 +1256,46 @@ void CommissionerApp::OnDatasetChanged()
         0xFFFF);
 }
 
-const JoinerInfo *CommissionerApp::OnJoinerRequest(JoinerType aType, const ByteArray &aJoinerId)
+Error CommissionerApp::OnJoinerRequest(std::string &aPSKd, const ByteArray &aJoinerId)
 {
-    auto joinerInfo = mJoiners.find({aType, aJoinerId});
+    Error error;
+
+    auto joinerInfo = mJoiners.find({JoinerType::kMeshCoP, aJoinerId});
     if (joinerInfo != mJoiners.end())
     {
-        return &joinerInfo->second;
+        aPSKd = joinerInfo->second.mPSKd;
+        ExitNow(error = Error::kNone);
     }
-    joinerInfo = mJoiners.find({aType, Commissioner::ComputeJoinerId(0)});
+
+    // Check if all joiners has been enabled.
+    joinerInfo = mJoiners.find({JoinerType::kMeshCoP, Commissioner::ComputeJoinerId(0)});
     if (joinerInfo != mJoiners.end())
     {
-        return &joinerInfo->second;
+        aPSKd = joinerInfo->second.mPSKd;
+        ExitNow(error = Error::kNone);
     }
-    return nullptr;
+
+    error = Error::kNotFound;
+
+exit:
+    return error;
 }
 
-bool CommissionerApp::OnCommissioning(const JoinerInfo & aJoinerInfo,
-                                    const std::string &aVendorName,
-                                    const std::string &aVendorModel,
-                                    const std::string &aVendorSwVersion,
-                                    const ByteArray &  aVendorStackVersion,
-                                    const std::string &aProvisioningUrl,
-                                    const ByteArray &  aVendorData)
+void CommissionerApp::OnJoinerConnected(const ByteArray &aJoinerId, Error aError)
+{
+    (void)aJoinerId;
+    (void)aError;
+
+    // TODO(wgtdkp): logging
+}
+
+bool CommissionerApp::OnJoinerFinalize(const ByteArray &  aJoinerId,
+                                       const std::string &aVendorName,
+                                       const std::string &aVendorModel,
+                                       const std::string &aVendorSwVersion,
+                                       const ByteArray &  aVendorStackVersion,
+                                       const std::string &aProvisioningUrl,
+                                       const ByteArray &  aVendorData)
 {
     (void)aVendorName;
     (void)aVendorModel;
@@ -1280,7 +1305,7 @@ bool CommissionerApp::OnCommissioning(const JoinerInfo & aJoinerInfo,
 
     bool accepted = false;
 
-    auto configuredJoinerInfo = GetJoinerInfo(aJoinerInfo.mType, Commissioner::ComputeJoinerId(aJoinerInfo.mEui64));
+    auto configuredJoinerInfo = GetJoinerInfo(JoinerType::kMeshCoP, aJoinerId);
 
     // TODO(deimi): logging
     VerifyOrExit(configuredJoinerInfo != nullptr, accepted = false);

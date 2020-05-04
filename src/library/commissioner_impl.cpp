@@ -46,8 +46,6 @@ namespace ot {
 
 namespace commissioner {
 
-static constexpr uint8_t kLocalExternalAddrMask = 1 << 1;
-
 Error Commissioner::GeneratePSKc(ByteArray &        aPSKc,
                                  const std::string &aPassphrase,
                                  const std::string &aNetworkName,
@@ -126,14 +124,6 @@ Error Commissioner::GetMeshLocalAddr(std::string &      aMeshLocalAddr,
 
 exit:
     return error;
-}
-
-JoinerInfo::JoinerInfo(JoinerType aType, uint64_t aEui64, const ByteArray &aPSKd, const std::string &aProvisioningUrl)
-    : mType(aType)
-    , mEui64(aEui64)
-    , mPSKd(aPSKd)
-    , mProvisioningUrl(aProvisioningUrl)
-{
 }
 
 CommissionerImpl::CommissionerImpl(CommissionerHandler &aHandler, struct event_base *aEventBase)
@@ -2000,13 +1990,13 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
 {
     Error       error = Error::kNone;
     tlv::TlvSet tlvSet;
-
     tlv::TlvPtr tlv;
 
-    const JoinerInfo *joinerInfo = nullptr;
+    std::string joinerPSKd;
     uint16_t          joinerUdpPort;
     uint16_t          joinerRouterLocator;
     ByteArray         joinerIid;
+    ByteArray         joinerId;
     ByteArray         dtlsRecords;
 
     SuccessOrExit(error = GetTlvSet(tlvSet, aRlyRx));
@@ -2027,22 +2017,20 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
     VerifyOrExit(tlv->IsValid(), error = Error::kBadFormat);
     dtlsRecords = tlv->GetValue();
 
-    LOG_DEBUG("received RLY_RX.ntf: joinerIID={}, joinerRouterLocator={}, length={}", utils::Hex(joinerIid),
+    joinerId = joinerIid;
+    LOG_DEBUG("received RLY_RX.ntf: joinerID={}, joinerRouterLocator={}, length={}", utils::Hex(joinerId),
               joinerRouterLocator, dtlsRecords.size());
 
+    joinerId[0] ^= kLocalExternalAddrMask;
+    error = mCommissionerHandler.OnJoinerRequest(joinerPSKd, joinerId);
+    if (error != Error::kNone)
     {
-        auto joinerId = joinerIid;
-        joinerId[0] ^= kLocalExternalAddrMask;
-        joinerInfo = mCommissionerHandler.OnJoinerRequest(JoinerType::kMeshCoP, joinerId);
-        if (joinerInfo == nullptr)
-        {
-            LOG_INFO("joiner(IID={}) is disabled", utils::Hex(joinerIid));
-            ExitNow();
-        }
+        LOG_INFO("joiner(ID={}) is disabled", utils::Hex(joinerId));
+        ExitNow();
     }
 
     {
-        auto it = mCommissioningSessions.find(joinerIid);
+        auto it = mCommissioningSessions.find(joinerId);
         if (it != mCommissioningSessions.end() && it->second.Disabled())
         {
             mCommissioningSessions.erase(it);
@@ -2055,8 +2043,8 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
 
             SuccessOrExit(error = mBrClient.GetLocalAddr(localAddr));
             it = mCommissioningSessions
-                     .emplace(std::piecewise_construct, std::forward_as_tuple(joinerIid),
-                              std::forward_as_tuple(*this, *joinerInfo, joinerUdpPort, joinerRouterLocator, joinerIid,
+                     .emplace(std::piecewise_construct, std::forward_as_tuple(joinerId),
+                              std::forward_as_tuple(*this, joinerId, joinerPSKd, joinerUdpPort, joinerRouterLocator,
                                                     aRlyRx.GetEndpoint()->GetPeerAddr(),
                                                     aRlyRx.GetEndpoint()->GetPeerPort(), localAddr, kCommissioningPort))
                      .first;
@@ -2065,35 +2053,13 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
             std::string peerAddr = "unknown address";
             IgnoreError(session.GetPeerAddr().ToString(peerAddr));
 
-            LOG_DEBUG("received a new joiner(IID={}) DTLS connection from [{}]:{}", utils::Hex(session.GetJoinerIid()),
+            LOG_DEBUG("received a new joiner(ID={}) DTLS connection from [{}]:{}", utils::Hex(joinerId),
                       peerAddr, session.GetPeerPort());
 
-            auto onConnected = [peerAddr](CommissioningSession &aSession, Error aError) {
-                if (aError != Error::kNone)
-                {
-                    LOG_ERROR("a joiner(IID={}) DTLS connection from [{}]:{} failed: {}",
-                              utils::Hex(aSession.GetJoinerIid()), peerAddr, aSession.GetPeerPort(),
-                              ErrorToString(aError));
-                }
-                else
-                {
-                    LOG_INFO("a joiner(IID={}) DTLS connection from [{}]:{} succeed",
-                             utils::Hex(aSession.GetJoinerIid()), peerAddr, aSession.GetPeerPort());
-                }
-            };
+            session.Connect();
 
-            if ((error = session.Start(onConnected)) != Error::kNone)
-            {
-                mCommissioningSessions.erase(it);
-                it = mCommissioningSessions.end();
-                ExitNow();
-            }
-            else
-            {
-                LOG_INFO("commissioning timer started, expiration-time={}",
-                         TimePointToString(session.GetExpirationTime()));
-                mCommissioningSessionTimer.Start(session.GetExpirationTime());
-            }
+            LOG_INFO("commissioning timer started, expiration-time={}", TimePointToString(session.GetExpirationTime()));
+            mCommissioningSessionTimer.Start(session.GetExpirationTime());
         }
 
         ASSERT(it != mCommissioningSessions.end());
@@ -2125,7 +2091,7 @@ void CommissionerImpl::HandleCommissioningSessionTimer(Timer &aTimer)
         {
             it = mCommissioningSessions.erase(it);
 
-            LOG_INFO("commissioning session (joiner IID={}) removed", utils::Hex(session.GetJoinerIid()));
+            LOG_INFO("commissioning session (joiner ID={}) removed", utils::Hex(session.GetJoinerId()));
         }
         else
         {

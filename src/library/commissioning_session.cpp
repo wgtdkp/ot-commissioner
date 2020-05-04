@@ -43,19 +43,19 @@ namespace ot {
 namespace commissioner {
 
 CommissioningSession::CommissioningSession(CommissionerImpl &aCommImpl,
-                                           const JoinerInfo &aJoinerInfo,
+                                           const ByteArray & aJoinerId,
+                                           const std::string &aJoinerPSkd,
                                            uint16_t          aJoinerUdpPort,
                                            uint16_t          aJoinerRouterLocator,
-                                           const ByteArray & aJoinerIid,
                                            const Address &   aJoinerAddr,
                                            uint16_t          aJoinerPort,
                                            const Address &   aLocalAddr,
                                            uint16_t          aLocalPort)
     : mCommImpl(aCommImpl)
-    , mJoinerInfo(aJoinerInfo)
+    , mJoinerId(aJoinerId)
+    , mJoinerPSKd(aJoinerPSkd)
     , mJoinerUdpPort(aJoinerUdpPort)
     , mJoinerRouterLocator(aJoinerRouterLocator)
-    , mJoinerIid(aJoinerIid)
     , mRelaySocket(std::make_shared<RelaySocket>(*this, aJoinerAddr, aJoinerPort, aLocalAddr, aLocalPort))
     , mDtlsSession(std::make_shared<DtlsSession>(aCommImpl.GetEventBase(), /* aIsServer */ true, mRelaySocket))
     , mCoap(aCommImpl.GetEventBase(), *mDtlsSession)
@@ -64,29 +64,36 @@ CommissioningSession::CommissioningSession(CommissionerImpl &aCommImpl,
     ASSERT(mCoap.AddResource(mResourceJoinFin) == Error::kNone);
 }
 
-Error CommissioningSession::Start(ConnectHandler aOnConnected)
+void CommissioningSession::Connect()
 {
     Error error = Error::kNone;
 
     auto dtlsConfig = GetDtlsConfig(mCommImpl.GetConfig());
-    dtlsConfig.mPSK = mJoinerInfo.mPSKd;
+    dtlsConfig.mPSK = {mJoinerPSKd.begin(), mJoinerPSKd.end()};
 
     mExpirationTime = Clock::now() + MilliSeconds(kDtlsHandshakeTimeoutMax * 1000 + kCommissioningTimeout * 1000);
 
     SuccessOrExit(error = mDtlsSession->Init(dtlsConfig));
 
     {
-        auto onConnected = [this, aOnConnected](const DtlsSession &, Error aError) { aOnConnected(*this, aError); };
+        auto onConnected = [this](const DtlsSession &, Error aError) { HandleConnect(aError); };
         mDtlsSession->Connect(onConnected);
     }
 
 exit:
-    return error;
+    if (error != Error::kNone)
+    {
+        HandleConnect(error);
+    }
 }
 
-void CommissioningSession::Stop()
-{
+void CommissioningSession::Disconnect() {
     mDtlsSession->Disconnect(Error::kAbort);
+}
+
+void CommissioningSession::HandleConnect(Error aError)
+{
+    mCommImpl.mCommissionerHandler.OnJoinerConnected(mJoinerId, aError);
 }
 
 void CommissioningSession::RecvJoinerDtlsRecords(const ByteArray &aRecords)
@@ -114,8 +121,8 @@ Error CommissioningSession::SendRlyTx(const ByteArray &aDtlsMessage, bool aInclu
 
     mCommImpl.mBrClient.SendRequest(rlyTx, nullptr);
 
-    LOG_DEBUG("sent RLY_TX.ntf: CommissioningSessionState={}, joinerIID={}, length={}, includeKek={}",
-              mDtlsSession->GetStateString(), utils::Hex(GetJoinerIid()), aDtlsMessage.size(), aIncludeKek);
+    LOG_DEBUG("sent RLY_TX.ntf: CommissioningSessionState={}, joinerID={}, length={}, includeKek={}",
+              mDtlsSession->GetStateString(), utils::Hex(GetJoinerId()), aDtlsMessage.size(), aIncludeKek);
 
 exit:
     return error;
@@ -169,8 +176,8 @@ void CommissioningSession::HandleJoinFin(const coap::Request &aJoinFin)
              utils::Hex(vendorData));
 
     // Validation done, request commissioning by user.
-    accepted = mCommImpl.mCommissionerHandler.OnCommissioning(
-        mJoinerInfo, vendorNameTlv->GetValueAsString(), vendorModelTlv->GetValueAsString(),
+    accepted = mCommImpl.mCommissionerHandler.OnJoinerFinalize(
+        mJoinerId, vendorNameTlv->GetValueAsString(), vendorModelTlv->GetValueAsString(),
         vendorSwVersionTlv->GetValueAsString(), vendorStackVersionTlv->GetValue(), provisioningUrl, vendorData);
     VerifyOrExit(accepted, error = Error::kReject);
 

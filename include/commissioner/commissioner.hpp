@@ -125,36 +125,6 @@ struct Config
 };
 
 /**
- * @brief Enumeration of Joiner Type for steering.
- *
- */
-enum class JoinerType
-{
-    kMeshCoP = 0, ///< Conventional non-CCM joiner.
-    kAE,          ///< CCM AE joiner.
-    kNMKP         ///< CCM NMKP joiner.
-};
-
-/**
- * @brief Definition of joiner information.
- */
-struct JoinerInfo
-{
-    JoinerType mType;
-
-    // If the value is all-zeros, it represents for all joiners of this type.
-    uint64_t mEui64; ///< The IEEE EUI-64 value.
-
-    // Valid only if mType is kMeshCoP.
-    ByteArray mPSKd; ///< The pre-shared device key.
-
-    // Valid only if mType is kMeshCoP.
-    std::string mProvisioningUrl;
-
-    JoinerInfo(JoinerType aType, uint64_t aEui64, const ByteArray &aPSKd, const std::string &aProvisioningUrl);
-};
-
-/**
  * @brief The base class defines Handlers of commissioner events.
  *
  * Application should inherit this class and override the virtual
@@ -166,59 +136,41 @@ struct JoinerInfo
 class CommissionerHandler
 {
 public:
-
     /**
-     * The MGMT_PANID_CONFLICT.ans handler.
+     * The function notifies the start of a joining request from given joiner.
      *
-     * @param[in] aPeerAddr     A peer address that sent this MGMT_PANID_CONFLICT.ans request.
-     * @param[in] aChannelMask  A channel mask the peer scanned at.
-     * @param[in] aPanId        A PAN ID that has a conflict.
+     * @param[out] aPSKd      The password of the joiner.
+     * @param[in]  aJoinerId  A joiner ID.
+     *
+     * @return Error::kNotFound  Cannot find the given joiner.
+     * @return Error::kNone      The given joiner is found, EUI64 and PSKd are set.
      *
      */
-    virtual void OnPanIdConflict(const std::string &aPeerAddr,
-                                 const ChannelMask &aChannelMask,
-                                 const uint16_t &   aPanId) {
-        (void)aPeerAddr;
-        (void)aChannelMask;
-        (void)aPanId;
-    }
-
-    /**
-     * The MGMT_ED_REPORT.ans handler.
-     *
-     * @param[in] aPeerAddr     A peer address that sent this MGMT_PANID_CONFLICT.ans request.
-     * @param[in] aChannelMask  A channel mask the peer scanned at.
-     * @param[in] aEnergyList   A list of measured energy level in dBm.
-     *
-     */
-    virtual void OnEnergyReport(const std::string &aPeerAddr,
-                                const ChannelMask &aChannelMask,
-                                const ByteArray &  aEnergyList) {
-        (void)aPeerAddr;
-        (void)aChannelMask;
-        (void)aEnergyList;
-    }
-
-    /**
-     * The function request user information of given joiner.
-     * Got called when a joiner starts the commissioning session.
-     *
-     * @param[in]  aType    A joiner type.
-     * @param[in]  aId      A joiner ID.
-     *
-     * @return the associated joiner info.
-     *
-     */
-    virtual const JoinerInfo *OnJoinerRequest(JoinerType aJoinerType, const ByteArray &aJoinerId) {
-        (void)aJoinerType;
+    virtual Error OnJoinerRequest(std::string &aPSKd, const ByteArray &aJoinerId) {
+        (void)aPSKd;
         (void)aJoinerId;
-        return nullptr;
+        return Error::kNotFound;
     }
 
     /**
-     * The function requests vendor-specific commissioning.
+     * This function notifies a joiner DTLS session is connected or not.
      *
-     * @param[in]  aJoinerInfo         A joiner info indexing the commissioning joiner.
+     * @param[in] aJoinerId  The joiner ID.
+     * @param[in] aError     The error during connecting; the joiner connection
+     *                       is successfully established if error is Error::kNone;
+     *                       otherwise, it failed to connect.
+     *
+     */
+    virtual void OnJoinerConnected(const ByteArray &aJoinerId, Error aError) {
+        (void)aJoinerId;
+        (void)aError;
+    }
+
+    /**
+     * This function notifies the receiving of JOIN_FIN.req message and asks for
+     * vendor-specific provisioning if required.
+     *
+     * @param[in]  aJoinerId           The joiner ID.
      * @param[in]  aVendorName         A human-readable product vendor name string in utf-8 format.
      * @param[in]  aVendorModel        A human-readable product model string.
      * @param[in]  aVendorSwVersion    A utf-8 string that specifies the product software version.
@@ -234,31 +186,63 @@ public:
      * @return  A boolean indicates whether the joiner is accepted.
      *
      * @note This will be called when A well-formed JOIN_FIN.req has been received.
-     *
      */
-    virtual bool OnCommissioning(const JoinerInfo & aJoinerInfo,
-                                 const std::string &aVendorName,
-                                 const std::string &aVendorModel,
-                                 const std::string &aVendorSwVersion,
-                                 const ByteArray &  aVendorStackVersion,
-                                 const std::string &aProvisioningUrl,
-                                 const ByteArray &  aVendorData)
-    {
-        (void)aJoinerInfo;
+    virtual bool OnJoinerFinalize(const ByteArray &  aJoinerId,
+                                  const std::string &aVendorName,
+                                  const std::string &aVendorModel,
+                                  const std::string &aVendorSwVersion,
+                                  const ByteArray &  aVendorStackVersion,
+                                  const std::string &aProvisioningUrl,
+                                  const ByteArray &  aVendorData) {
+        (void)aJoinerId;
         (void)aVendorName;
         (void)aVendorModel;
         (void)aVendorSwVersion;
         (void)aVendorStackVersion;
         (void)aProvisioningUrl;
         (void)aVendorData;
-        return true;
+        return false;
     }
 
-    virtual void OnJoinerFinalize(const JoinerInfo &aJoinerInfo)
-    {
-        (void)aJoinerInfo;
+    /**
+     * This function notifies the receiving a PAN ID conflict answer.
+     *
+     * @param[in] aPeerAddr     A peer address that sent the MGMT_PANID_CONFLICT.ans request.
+     * @param[in] aChannelMask  A channel mask the peer scanned with.
+     * @param[in] aPanId        The PAN ID that has a conflict.
+     *
+     */
+    virtual void OnPanIdConflict(const std::string &aPeerAddr,
+                                 const ChannelMask &aChannelMask,
+                                 const uint16_t &   aPanId) {
+        (void)aPeerAddr;
+        (void)aChannelMask;
+        (void)aPanId;
     }
 
+    /**
+     * This function notifies the receiving of a energy scan report.
+     *
+     * @param[in] aPeerAddr     A peer address that sent the MGMT_PANID_CONFLICT.ans request.
+     * @param[in] aChannelMask  A channel mask the peer scanned with.
+     * @param[in] aEnergyList   A list of measured energy level in dBm.
+     *
+     */
+    virtual void OnEnergyReport(const std::string &aPeerAddr,
+                                const ChannelMask &aChannelMask,
+                                const ByteArray &  aEnergyList) {
+        (void)aPeerAddr;
+        (void)aChannelMask;
+        (void)aEnergyList;
+    }
+
+    /**
+     * This function notifies that the operational dataset has been changed.
+     *
+     * It is typical for the handler to request latest operational dataset by
+     * calling GetActiveDataset and GetPendingDataset.
+     *
+     */
     virtual void OnDatasetChanged() {}
 
     virtual ~CommissionerHandler() = default;

@@ -197,10 +197,6 @@ private:
     static Error ValidateConfig(const Config &aConfig);
     void         LoggingConfig();
 
-    ByteArray &  GetPendingSteeringData(JoinerType aJoinerType);
-    uint16_t &   GetPendingJoinerUdpPort(JoinerType aJoinerType);
-    bool         IsValidJoinerUdpPort(JoinerType aType, uint16_t aUdpPort);
-    void         UpdateCommissionerDataset(const std::list<tlv::Tlv> &aTlvList);
     static Error HandleStateResponse(const coap::Response *aResponse, Error aError);
 
     static ByteArray GetActiveOperationalDatasetTlvs(uint16_t aDatasetFlags);
