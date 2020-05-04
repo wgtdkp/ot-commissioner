@@ -34,7 +34,6 @@
 #include <commissioner/defines.hpp>
 #include <commissioner/error.hpp>
 #include <commissioner/network_data.hpp>
-#include <commissioner/border_agent.hpp>
 #include <commissioner/commissioner.hpp>
 %}
 
@@ -62,7 +61,6 @@
 %feature("director") ot::commissioner::CommissionerHandler;
 
 %template(ByteArray) std::vector<uint8_t>;
-%template(BorderAgentList) std::list<ot::commissioner::BorderAgent>;
 %template(ChannelMask) std::vector<ot::commissioner::ChannelMaskEntry>;
 %template(StringVector) std::vector<std::string>;
 
@@ -90,14 +88,12 @@
 %apply std::string& OUTPUT { std::string &aMeshLocalAddr }
 %apply std::string& OUTPUT { std::string &aExistingCommissionerId }
 
+%shared_ptr(ot::commissioner::Logger)
 %shared_ptr(ot::commissioner::Commissioner)
-
-// %typemap(javainterfaces) ot::commissioner::Commissioner "Parcelable"
 
 namespace ot {
 namespace commissioner {
     // Remove async commissioner APIs.
-    %ignore Commissioner::Discover(Handler<std::list<BorderAgent>> aHandler);
     %ignore Commissioner::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort);
     %ignore Commissioner::Petition(PetitionHandler aHandler, const std::string &aAddr, uint16_t aPort);
     %ignore Commissioner::Resign(ErrorHandler aHandler);
@@ -144,6 +140,5 @@ namespace commissioner {
 %include <commissioner/defines.hpp>
 %include <commissioner/error.hpp>
 %include <commissioner/network_data.hpp>
-%include <commissioner/border_agent.hpp>
 %include <commissioner/commissioner.hpp>
 %include <commissioner/commissioner.hpp>

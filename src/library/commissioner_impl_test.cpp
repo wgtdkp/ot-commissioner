@@ -70,11 +70,6 @@ public:
     }
     void OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
     void OnDatasetChanged() override {}
-    void OnLogging(LogLevel aLevel, const std::string &aMsg) override
-    {
-        (void)aLevel;
-        (void)aMsg;
-    }
 };
 
 TEST_CASE("mesh-local-address-basic", "[mesh-local-addr]")

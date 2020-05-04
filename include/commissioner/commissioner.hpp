@@ -259,12 +259,7 @@ public:
         (void)aJoinerInfo;
     }
 
-    virtual void              OnDatasetChanged()                                                  {}
-
-    virtual void              OnLogging(LogLevel aLevel, const std::string &aMsg)                 {
-        (void)aLevel;
-        (void)aMsg;
-    }
+    virtual void OnDatasetChanged() {}
 
     virtual ~CommissionerHandler() = default;
 };

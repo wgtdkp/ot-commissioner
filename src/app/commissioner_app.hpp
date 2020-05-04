@@ -48,6 +48,7 @@
 #include <commissioner/commissioner.hpp>
 #include <commissioner/network_data.hpp>
 
+#include "app/border_agent.hpp"
 #include "common/address.hpp"
 
 namespace ot {
@@ -91,7 +92,6 @@ public:
 
     void              OnJoinerFinalize(const JoinerInfo &aJoinerInfo) override { (void)aJoinerInfo; }
     void              OnDatasetChanged() override;
-    void              OnLogging(LogLevel aLevel, const std::string &aMsg) override;
 
     // Discover Border Agent on link-local network.
     Error Discover();

@@ -1180,6 +1180,21 @@ void CommissionerApp::MergeDataset(CommissionerDataset &aDst, const Commissioner
 #undef SET_IF_PRESENT
 }
 
+const JoinerInfo *CommissionerApp::GetJoinerInfo(JoinerType aType, const ByteArray &aJoinerId)
+{
+    auto joinerInfo = mJoiners.find({aType, aJoinerId});
+    if (joinerInfo != mJoiners.end())
+    {
+        return &joinerInfo->second;
+    }
+    joinerInfo = mJoiners.find({aType, Commissioner::ComputeJoinerId(0)});
+    if (joinerInfo != mJoiners.end())
+    {
+        return &joinerInfo->second;
+    }
+    return nullptr;
+}
+
 void CommissionerApp::OnPanIdConflict(const std::string &aPeerAddr,
                                       const ChannelMask &aChannelMask,
                                       const uint16_t &   aPanId)

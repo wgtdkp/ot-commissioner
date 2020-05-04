@@ -52,7 +52,7 @@ std::shared_ptr<Commissioner> Commissioner::Create(CommissionerHandler &aHandler
 }
 
 CommissionerSafe::CommissionerSafe(CommissionerHandler &aHandler)
-    : mImpl(mEventBase.Get())
+    : mImpl(aHandler, mEventBase.Get())
 {
 }
 

@@ -71,7 +71,6 @@ public:
     {
         if (mSocket->Connect(aPeerAddr, aPeerPort) != 0)
         {
-            LOG_DEBUG("connect socket to addr={}, port={} failed", aPeerAddr, aPeerPort);
             if (aOnConnected != nullptr)
             {
                 aOnConnected(mDtlsSession, Error::kTransportFailed);
