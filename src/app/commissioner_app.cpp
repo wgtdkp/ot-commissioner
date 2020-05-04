@@ -34,7 +34,6 @@
 #include "app/commissioner_app.hpp"
 
 #include <algorithm>
-#include <ctime>
 
 #include "app/file_util.hpp"
 #include "app/json.hpp"
@@ -82,6 +81,8 @@ Error CommissionerApp::Init(const Config &aConfig)
                                    aProvisioningUrl, aVendorData);
     });
 
+    mCommDataset = MakeDefaultCommissionerDataset();
+
 exit:
     return error;
 }
@@ -94,7 +95,7 @@ Error CommissionerApp::Start(std::string &      aExistingCommissionerId,
 
     // We need to report the already active commissioner ID if one exists.
     SuccessOrExit(error = mCommissioner->Petition(aExistingCommissionerId, aBorderAgentAddr, aBorderAgentPort));
-    SuccessOrExit(error = PullNetworkData());
+    SuccessOrExit(error = SyncNetworkData());
 
 exit:
     if (error != Error::kNone)
@@ -141,15 +142,14 @@ exit:
     return error;
 }
 
-Error CommissionerApp::PullNetworkData()
+Error CommissionerApp::SyncNetworkData(void)
 {
     Error                     error = Error::kNone;
-    CommissionerDataset       commDataset;
     ActiveOperationalDataset  activeDataset;
     PendingOperationalDataset pendingDataset;
     BbrDataset                bbrDataset;
 
-    SuccessOrExit(error = mCommissioner->GetCommissionerDataset(commDataset, 0xFFFF));
+    SuccessOrExit(error = mCommissioner->SetCommissionerDataset(mCommDataset));
     if (IsCcmMode())
     {
         SuccessOrExit(error = mCommissioner->GetBbrDataset(bbrDataset, 0xFFFF));
@@ -158,7 +158,6 @@ Error CommissionerApp::PullNetworkData()
     SuccessOrExit(error = mCommissioner->GetActiveDataset(activeDataset, 0xFFFF));
     SuccessOrExit(error = mCommissioner->GetPendingDataset(pendingDataset, 0xFFFF));
 
-    MergeDataset(mCommDataset, commDataset);
     if (IsCcmMode())
     {
         mBbrDataset = bbrDataset;
@@ -1033,6 +1032,24 @@ Error CommissionerApp::SetToken(const ByteArray &aSignedToken, const ByteArray &
 bool CommissionerApp::JoinerKey::operator<(const JoinerKey &aOther) const
 {
     return mType < aOther.mType || (mType == aOther.mType && mId < aOther.mId);
+}
+
+CommissionerDataset CommissionerApp::MakeDefaultCommissionerDataset()
+{
+    CommissionerDataset dataset;
+
+    dataset.mJoinerUdpPort = kDefaultJoinerUdpPort;
+    dataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
+
+    if (IsCcmMode())
+    {
+        dataset.mAeUdpPort = kDefaultAeUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kAeUdpPortBit;
+        dataset.mNmkpUdpPort = kDefaultNmkpUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kNmkpUdpPortBit;
+    }
+
+    return dataset;
 }
 
 ByteArray &CommissionerApp::GetSteeringData(CommissionerDataset &aDataset, JoinerType aJoinerType)

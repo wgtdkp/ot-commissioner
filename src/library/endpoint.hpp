@@ -30,12 +30,14 @@
 #define OT_COMM_LIBRARY_ENDPOINT_HPP_
 
 #include <functional>
-#include <stdint.h>
 #include <string>
+
+#include <stdint.h>
 
 #include <commissioner/error.hpp>
 
 #include "common/address.hpp"
+#include "library/message.hpp"
 
 namespace ot {
 
@@ -49,9 +51,9 @@ public:
     Endpoint()          = default;
     virtual ~Endpoint() = default;
 
-    virtual Error    Send(const ByteArray &aBuf) = 0;
-    virtual Address  GetPeerAddr() const         = 0;
-    virtual uint16_t GetPeerPort() const         = 0;
+    virtual Error    Send(const ByteArray &aBuf, MessageSubType aSubType) = 0;
+    virtual Address  GetPeerAddr() const                                  = 0;
+    virtual uint16_t GetPeerPort() const                                  = 0;
 
     void SetReceiver(Receiver aReceiver) { mReceiver = aReceiver; }
 

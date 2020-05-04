@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 #  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
@@ -26,20 +27,30 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if (BUILD_SHARED_LIBS)
-    set(EVENT__LIBRARY_TYPE "SHARED" CACHE BOOL "libevent build shared libraries" FORCE)
-else()
-    set(EVENT__LIBRARY_TYPE "STATIC" CACHE BOOL "libevent build static libraries" FORCE)
-endif()
-set(EVENT__DISABLE_OPENSSL ON CACHE BOOL "libevent disable OpenSSL" FORCE)
-set(EVENT__DISABLE_SAMPLES ON CACHE BOOL "libevent disable samples" FORCE)
-set(EVENT__DISABLE_REGRESS ON CACHE BOOL "libevent disable regression tests" FORCE)
-set(EVENT__DISABLE_TESTS ON CACHE BOOL "libevent disable tests" FORCE)
-set(EVENT__DISABLE_BENCHMARK ON CACHE BOOL "libevent disable benchmark" FORCE)
-add_subdirectory(repo)
+[ -z "${TEST_ROOT_DIR}" ] && . "$(dirname "$0")"/common.sh
 
-target_include_directories(event_core
-    INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/repo/include
-        ${CMAKE_CURRENT_BINARY_DIR}/repo/include
-)
+test_network_sync()
+{
+    set -e
+
+    start_otbr "${NON_CCM_NCP}" "eth0"
+    form_network "${PSKC}"
+
+    start_commissioner "${NON_CCM_CONFIG}"
+    send_command_to_commissioner "start :: 49191"
+    send_command_to_commissioner "network sync"
+    stop_commissioner
+}
+
+test_get_commissioner_dataset()
+{
+    set -e
+
+    start_otbr "${NON_CCM_NCP}" "eth0"
+    form_network "${PSKC}"
+
+    start_commissioner "${NON_CCM_CONFIG}"
+    send_command_to_commissioner "start :: 49191"
+    send_command_to_commissioner "commdataset get"
+    stop_commissioner
+}

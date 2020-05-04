@@ -39,7 +39,6 @@
 #include "library/cose.hpp"
 #include "library/logging.hpp"
 #include "library/openthread/bloom_filter.hpp"
-#include "library/uri.hpp"
 
 namespace ot {
 
@@ -99,6 +98,43 @@ const Config &CommissionerSafe::GetConfig() const
 {
     // Config is read-only, no synchronization is needed.
     return mImpl.GetConfig();
+}
+
+Error CommissionerSafe::StartEventLoopThread(void)
+{
+    Error error = Error::kNone;
+
+    VerifyOrExit(!mEventThread.joinable(), error = Error::kAlready);
+
+    mEventThread = std::thread([this]() {
+        LOG_INFO("event loop started in background thread");
+        event_base_loop(mEventBase.Get(), EVLOOP_NO_EXIT_ON_EMPTY);
+    });
+
+exit:
+    return error;
+}
+
+void CommissionerSafe::StopEventLoopThread(void)
+{
+    std::promise<void> pro;
+
+    VerifyOrExit(mEventThread.joinable());
+
+    // Send `Stop` to the event loop to break it from inside.
+    // This makes sure the event loop has been started when we
+    // trying to break it.
+    PushAsyncRequest([&pro, this]() {
+        event_base_loopbreak(mEventBase.Get());
+        pro.set_value();
+    });
+
+    pro.get_future().wait();
+
+    mEventThread.join();
+
+exit:
+    return;
 }
 
 void CommissionerSafe::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort)
@@ -562,43 +598,6 @@ CommissionerSafe::AsyncRequest CommissionerSafe::PopAsyncRequest()
         return ret;
     }
     return nullptr;
-}
-
-Error CommissionerSafe::StartEventLoopThread(void)
-{
-    Error error = Error::kNone;
-
-    VerifyOrExit(!mEventThread.joinable(), error = Error::kAlready);
-
-    mEventThread = std::thread([this]() {
-        LOG_INFO("event loop started in background thread");
-        event_base_loop(mEventBase.Get(), EVLOOP_NO_EXIT_ON_EMPTY);
-    });
-
-exit:
-    return error;
-}
-
-void CommissionerSafe::StopEventLoopThread(void)
-{
-    std::promise<void> pro;
-
-    VerifyOrExit(mEventThread.joinable());
-
-    // Send `Stop` to the event loop to break it from inside.
-    // This makes sure the event loop has been started when we
-    // trying to break it.
-    PushAsyncRequest([&pro, this]() {
-        event_base_loopbreak(mEventBase.Get());
-        pro.set_value();
-    });
-
-    pro.get_future().wait();
-
-    mEventThread.join();
-
-exit:
-    return;
 }
 
 CommissionerSafe::EventBaseHolder::EventBaseHolder()

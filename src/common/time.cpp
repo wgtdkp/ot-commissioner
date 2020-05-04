@@ -1,5 +1,5 @@
 /*
- *    Copyright (c) 2019, The OpenThread Authors.
+ *    Copyright (c) 2020, The OpenThread Authors.
  *    All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -26,66 +26,33 @@
  *    POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OT_COMM_COMMON_ADDRESS_HPP_
-#define OT_COMM_COMMON_ADDRESS_HPP_
+/**
+ * @file
+ *   This file implements time measurements.
+ */
 
-#include <string>
+#include "time.hpp"
 
-#include <sys/socket.h>
+#include <time.h>
 
-#include <commissioner/defines.hpp>
-#include <commissioner/error.hpp>
+#include <iomanip>
+#include <sstream>
 
 namespace ot {
 
 namespace commissioner {
 
-class Address
+std::string TimePointToString(const TimePoint &aTimePoint)
 {
-public:
-    Address() = default;
+    struct tm         localTime;
+    std::time_t       time = Clock::to_time_t(aTimePoint);
+    std::stringstream ss;
 
-    bool operator==(const Address &aOther) const { return mBytes == aOther.mBytes; }
-
-    bool operator!=(const Address &aOther) const { return !(*this == aOther); }
-
-    bool operator<(const Address &aOther) const { return mBytes < aOther.mBytes; }
-
-    bool IsValid() const { return !mBytes.empty(); }
-
-    bool IsIpv4() const { return mBytes.size() == 4; }
-
-    bool IsIpv6() const { return mBytes.size() == 16; }
-
-    bool IsMulticast() const { return IsValid() && mBytes[0] == 0xFF; }
-
-    Error Set(const ByteArray &aRawAddr)
-    {
-        if (aRawAddr.size() != 4 && aRawAddr.size() != 16)
-        {
-            return Error::kInvalidArgs;
-        }
-        mBytes = aRawAddr;
-        return Error::kNone;
-    }
-
-    Error Set(const std::string &aIp);
-
-    Error Set(const sockaddr_storage &aSockAddr);
-
-    const ByteArray &GetRaw() const { return mBytes; }
-
-    Error ToString(std::string &aAddr) const;
-
-    // Invalid address string is not acceptable.
-    static Address FromString(const std::string &aAddr);
-
-private:
-    ByteArray mBytes;
-};
+    localtime_r(&time, &localTime);
+    ss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
 
 } // namespace commissioner
 
 } // namespace ot
-
-#endif // OT_COMM_COMMON_ADDRESS_HPP_
