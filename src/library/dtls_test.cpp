@@ -31,10 +31,11 @@
  *   This file defines test cases for DTLS implementation with mbedtls.
  */
 
+#include "library/dtls.hpp"
+
 #include <catch2/catch.hpp>
 
-#include <coap.hpp>
-#include <dtls.hpp>
+#include "library/coap.hpp"
 
 namespace ot {
 
@@ -160,7 +161,7 @@ TEST_CASE("dtls-mbedtls-client-server", "[dtls]")
         REQUIRE(aError == Error::kNone);
         REQUIRE(aSession.GetState() == DtlsSession::State::kConnected);
 
-        REQUIRE(aSession.Send(kHello) == Error::kNone);
+        REQUIRE(aSession.Send(kHello, MessageSubType::kNone) == Error::kNone);
     };
     dtlsClient.Connect(clientConnected);
 

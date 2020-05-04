@@ -31,9 +31,9 @@
  *   This file defines test cases for CoAP implementation.
  */
 
-#include <catch2/catch.hpp>
+#include "library/coap.hpp"
 
-#include <coap.hpp>
+#include <catch2/catch.hpp>
 
 namespace ot {
 
@@ -291,8 +291,10 @@ public:
 
     void SetPeer(MockEndpoint *aPeer) { mPeer = aPeer; }
 
-    Error Send(const ByteArray &aBuf) override
+    Error Send(const ByteArray &aBuf, MessageSubType aSubType) override
     {
+        (void)aSubType;
+
         if (!mDropMessage)
         {
             mSendQueue.emplace(aBuf);

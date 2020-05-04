@@ -34,9 +34,8 @@
 #ifndef OT_COMM_LIBRARY_COAP_SECURE_HPP_
 #define OT_COMM_LIBRARY_COAP_SECURE_HPP_
 
-#include "coap.hpp"
-#include "dtls.hpp"
-#include "logging.hpp"
+#include "library/coap.hpp"
+#include "library/dtls.hpp"
 
 namespace ot {
 
@@ -80,6 +79,17 @@ public:
             }
         }
         mDtlsSession.Connect(aOnConnected);
+    }
+
+    Error GetLocalAddr(Address &aAddr) const
+    {
+        Error error = Error::kNone;
+
+        VerifyOrExit(mSocket->IsConnected(), error = Error::kInvalidState);
+        aAddr = mSocket->GetLocalAddr();
+
+    exit:
+        return error;
     }
 
     void Stop() { Disconnect(); }

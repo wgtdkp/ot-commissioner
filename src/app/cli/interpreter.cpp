@@ -31,16 +31,15 @@
  *   The file implements CLI interpreter.
  */
 
-#include "interpreter.hpp"
-
-#include <string.h>
+#include "app/cli/interpreter.hpp"
 
 #include <limits>
 
-#include <utils.hpp>
+#include <string.h>
 
-#include "file_util.hpp"
-#include "json.hpp"
+#include "app/file_util.hpp"
+#include "app/json.hpp"
+#include "common/utils.hpp"
 
 #if defined(SuccessOrExit)
 #undef SuccessOrExit
@@ -90,10 +89,9 @@ const std::map<std::string, std::string> &Interpreter::mUsageMap = *new std::map
               "token print\n"
               "token set <signed-token-hex-string-file> <signer-cert-pem-file>"},
     {"network", "network save <network-data-file>\n"
-                "network pull"},
+                "network sync"},
     {"sessionid", "sessionid"},
-    {"borderagent", "borderagent discover\n"
-                    "borderagent list\n"
+    {"borderagent", "borderagent discover [<timeout-in-milliseconds>]\n"
                     "borderagent get locator\n"
                     "borderagent get meshlocaladdr"},
     {"joiner", "joiner enable (meshcop|ae|nmkp) <joiner-eui64> [<joiner-password>] [<provisioning-url>]\n"
@@ -405,9 +403,9 @@ Interpreter::Value Interpreter::ProcessNetwork(const Expression &aExpr)
         VerifyOrExit(aExpr.size() >= 3, msg = Usage(aExpr));
         SuccessOrExit(error = mCommissioner->SaveNetworkData(aExpr[2]));
     }
-    else if (CaseInsensitiveEqual(aExpr[1], "pull"))
+    else if (CaseInsensitiveEqual(aExpr[1], "sync"))
     {
-        SuccessOrExit(error = mCommissioner->PullNetworkData());
+        SuccessOrExit(error = mCommissioner->SyncNetworkData());
     }
     else
     {
@@ -439,15 +437,16 @@ Interpreter::Value Interpreter::ProcessBorderAgent(const Expression &aExpr)
 
     if (CaseInsensitiveEqual(aExpr[1], "discover"))
     {
-        SuccessOrExit(error = mCommissioner->Discover());
-    }
-    else if (CaseInsensitiveEqual(aExpr[1], "list"))
-    {
-        error = Error::kNone;
-        for (const auto &ba : mCommissioner->GetBorderAgentList())
+        uint64_t timeout = 4000;
+
+        if (aExpr.size() >= 3)
         {
-            msg += ToString(ba);
+            SuccessOrExit(ParseInteger(timeout, aExpr[2]), msg = aExpr[2]);
         }
+
+        SuccessOrExit(error = DiscoverBorderAgent(BorderAgentHandler, static_cast<size_t>(timeout)));
+
+        ExitNow(error = Error::kNone);
     }
     else if (CaseInsensitiveEqual(aExpr[1], "get"))
     {
@@ -1084,6 +1083,19 @@ Interpreter::Value Interpreter::ProcessHelp(const Expression &aExpr)
 
 exit:
     return {error, msg};
+}
+
+void Interpreter::BorderAgentHandler(const BorderAgent *aBorderAgent, const std::string *aErrorMessage)
+{
+    if (aErrorMessage != nullptr)
+    {
+        Console::Write(*aErrorMessage, Console::Color::kRed);
+    }
+    else
+    {
+        ASSERT(aBorderAgent != nullptr);
+        Console::Write(ToString(*aBorderAgent), Console::Color::kGreen);
+    }
 }
 
 const std::string Interpreter::Usage(Expression aExpr)

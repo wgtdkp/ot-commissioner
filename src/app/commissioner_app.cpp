@@ -31,17 +31,14 @@
  *   The file implements commissioner application.
  */
 
-#include "commissioner_app.hpp"
+#include "app/commissioner_app.hpp"
 
 #include <algorithm>
-#include <ctime>
-#include <fstream>
 
-#include <address.hpp>
-#include <utils.hpp>
-
-#include "file_util.hpp"
-#include "json.hpp"
+#include "app/file_util.hpp"
+#include "app/json.hpp"
+#include "common/address.hpp"
+#include "common/utils.hpp"
 
 namespace ot {
 
@@ -67,31 +64,10 @@ Error CommissionerApp::Init(const Config &aConfig)
     SuccessOrExit(error = commissioner->Start());
 
     mCommissioner = commissioner;
+    mCommDataset = MakeDefaultCommissionerDataset();
 
 exit:
     return error;
-}
-
-Error CommissionerApp::Discover()
-{
-    return mCommissioner->Discover(mBorderAgents);
-}
-
-const std::list<BorderAgent> &CommissionerApp::GetBorderAgentList() const
-{
-    return mBorderAgents;
-}
-
-const BorderAgent *CommissionerApp::GetBorderAgent(const std::string &aNetworkName)
-{
-    for (auto &ba : mBorderAgents)
-    {
-        if (aNetworkName.empty() || aNetworkName == ba.mNetworkName)
-        {
-            return &ba;
-        }
-    }
-    return nullptr;
 }
 
 Error CommissionerApp::Start(std::string &      aExistingCommissionerId,
@@ -102,7 +78,7 @@ Error CommissionerApp::Start(std::string &      aExistingCommissionerId,
 
     // We need to report the already active commissioner ID if one exists.
     SuccessOrExit(error = mCommissioner->Petition(aExistingCommissionerId, aBorderAgentAddr, aBorderAgentPort));
-    SuccessOrExit(error = PullNetworkData());
+    SuccessOrExit(error = SyncNetworkData());
 
 exit:
     if (error != Error::kNone)
@@ -149,15 +125,14 @@ exit:
     return error;
 }
 
-Error CommissionerApp::PullNetworkData()
+Error CommissionerApp::SyncNetworkData(void)
 {
     Error                     error = Error::kNone;
-    CommissionerDataset       commDataset;
     ActiveOperationalDataset  activeDataset;
     PendingOperationalDataset pendingDataset;
     BbrDataset                bbrDataset;
 
-    SuccessOrExit(error = mCommissioner->GetCommissionerDataset(commDataset, 0xFFFF));
+    SuccessOrExit(error = mCommissioner->SetCommissionerDataset(mCommDataset));
     if (IsCcmMode())
     {
         SuccessOrExit(error = mCommissioner->GetBbrDataset(bbrDataset, 0xFFFF));
@@ -166,7 +141,6 @@ Error CommissionerApp::PullNetworkData()
     SuccessOrExit(error = mCommissioner->GetActiveDataset(activeDataset, 0xFFFF));
     SuccessOrExit(error = mCommissioner->GetPendingDataset(pendingDataset, 0xFFFF));
 
-    MergeDataset(mCommDataset, commDataset);
     if (IsCcmMode())
     {
         mBbrDataset = bbrDataset;
@@ -1031,6 +1005,24 @@ bool CommissionerApp::JoinerKey::operator<(const JoinerKey &aOther) const
     return mType < aOther.mType || (mType == aOther.mType && mId < aOther.mId);
 }
 
+CommissionerDataset CommissionerApp::MakeDefaultCommissionerDataset()
+{
+    CommissionerDataset dataset;
+
+    dataset.mJoinerUdpPort = kDefaultJoinerUdpPort;
+    dataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
+
+    if (IsCcmMode())
+    {
+        dataset.mAeUdpPort = kDefaultAeUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kAeUdpPortBit;
+        dataset.mNmkpUdpPort = kDefaultNmkpUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kNmkpUdpPortBit;
+    }
+
+    return dataset;
+}
+
 ByteArray &CommissionerApp::GetSteeringData(CommissionerDataset &aDataset, JoinerType aJoinerType)
 {
     switch (aJoinerType)
@@ -1265,36 +1257,24 @@ bool CommissionerApp::OnCommissioning(const JoinerInfo & aJoinerInfo,
                                     const std::string &aProvisioningUrl,
                                     const ByteArray &  aVendorData)
 {
-    (void)aJoinerInfo;
     (void)aVendorName;
     (void)aVendorModel;
     (void)aVendorSwVersion;
     (void)aVendorStackVersion;
-    (void)aProvisioningUrl;
     (void)aVendorData;
-    return true;
-}
 
-static std::string ToString(LogLevel aLevel)
-{
-    switch (aLevel)
-    {
-    case LogLevel::kOff:
-        return "off";
-    case LogLevel::kCritical:
-        return "critical";
-    case LogLevel::kError:
-        return "error";
-    case LogLevel::kWarn:
-        return "warn";
-    case LogLevel::kInfo:
-        return "info";
-    case LogLevel::kDebug:
-        return "debug";
-    default:
-        ASSERT(false);
-        return "unknown";
-    }
+    bool accepted = false;
+
+    auto configuredJoinerInfo = GetJoinerInfo(aJoinerInfo.mType, Commissioner::ComputeJoinerId(aJoinerInfo.mEui64));
+
+    // TODO(deimi): logging
+    VerifyOrExit(configuredJoinerInfo != nullptr, accepted = false);
+    VerifyOrExit(aProvisioningUrl == configuredJoinerInfo->mProvisioningUrl, accepted = false);
+
+    accepted = true;
+
+exit:
+    return accepted;
 }
 
 } // namespace commissioner

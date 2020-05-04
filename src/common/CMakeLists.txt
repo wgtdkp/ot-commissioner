@@ -32,14 +32,16 @@ target_sources(commissioner-common
     PRIVATE
         address.cpp
         address.hpp
+        time.cpp
+        time.hpp
         utils.cpp
         utils.hpp
 )
 
 target_include_directories(commissioner-common
-    PUBLIC
+    PRIVATE
         ${PROJECT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/src
 )
 
 if (BUILD_SHARED_LIBS)
@@ -48,3 +50,22 @@ if (BUILD_SHARED_LIBS)
             ARCHIVE DESTINATION lib
     )
 endif()
+
+add_library(commissioner-common-test)
+
+target_sources(commissioner-common-test
+    PRIVATE
+        address.hpp
+        address_test.cpp
+)
+
+target_include_directories(commissioner-common-test
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src
+)
+
+target_link_libraries(commissioner-common-test
+    PRIVATE
+        Catch2::Catch2
+)

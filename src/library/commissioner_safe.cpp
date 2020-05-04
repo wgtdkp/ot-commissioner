@@ -31,16 +31,14 @@
  *   The file implements the thread safe commissioner.
  */
 
-#include "commissioner_safe.hpp"
+#include "library/commissioner_safe.hpp"
 
 #include <future>
 
-#include "coap.hpp"
-#include "cose.hpp"
-#include "dtls.hpp"
-#include "logging.hpp"
-#include "uri.hpp"
-#include "openthread/bloom_filter.hpp"
+#include "library/coap.hpp"
+#include "library/cose.hpp"
+#include "library/logging.hpp"
+#include "library/openthread/bloom_filter.hpp"
 
 namespace ot {
 
@@ -54,8 +52,7 @@ std::shared_ptr<Commissioner> Commissioner::Create(CommissionerHandler &aHandler
 }
 
 CommissionerSafe::CommissionerSafe(CommissionerHandler &aHandler)
-    : mImpl(aHandler, mEventBase.Get())
-    , mEventThread(nullptr)
+    : mImpl(mEventBase.Get())
 {
 }
 
@@ -71,6 +68,7 @@ Error CommissionerSafe::Init(const Config &aConfig)
 
     VerifyOrExit(event_assign(&mInvokeEvent, mEventBase.Get(), -1, EV_PERSIST, Invoke, this) == 0);
     VerifyOrExit(event_add(&mInvokeEvent, nullptr) == 0);
+
 exit:
     return error;
 }
@@ -90,9 +88,9 @@ Error CommissionerSafe::Start()
 {
     Error error = Error::kNone;
 
-    VerifyOrExit(mEventThread == nullptr, error = Error::kAlready);
+    VerifyOrExit(!mEventThread.joinable(), error = Error::kAlready);
 
-    mEventThread = std::make_shared<std::thread>([this]() { IgnoreError(mImpl.Start()); });
+    mEventThread = std::thread([this]() { IgnoreError(mImpl.Start()); });
 
 exit:
     return error;
@@ -101,34 +99,24 @@ exit:
 // Stop the commissioner running in background.
 void CommissionerSafe::Stop()
 {
-    mImpl.Stop();
+    std::promise<void> pro;
 
-    if (mEventThread && mEventThread->joinable())
-    {
-        mEventThread->join();
-        mEventThread = nullptr;
-    }
+    VerifyOrExit(mEventThread.joinable());
+
+    // Send `Stop` to the event loop to break it from inside.
+    // This makes sure the event loop has been started when we
+    // trying to break it.
+    PushAsyncRequest([&pro, this]() {
+        mImpl.Stop();
+        pro.set_value();
+    });
+
+    pro.get_future().wait();
+
+    mEventThread.join();
+
+exit:
     return;
-}
-
-void CommissionerSafe::Discover(Handler<std::list<BorderAgent>> aHandler)
-{
-    PushAsyncRequest([=]() { mImpl.Discover(aHandler); });
-}
-
-Error CommissionerSafe::Discover(std::list<BorderAgent> &aBorderAgentList)
-{
-    std::promise<Error> pro;
-    auto                wait = [&pro, &aBorderAgentList](const std::list<BorderAgent> *borderAgentList, Error error) {
-        if (borderAgentList != nullptr)
-        {
-            aBorderAgentList = *borderAgentList;
-        }
-        pro.set_value(error);
-    };
-
-    Discover(wait);
-    return pro.get_future().get();
 }
 
 void CommissionerSafe::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort)

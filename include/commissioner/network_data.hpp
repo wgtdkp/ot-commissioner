@@ -34,12 +34,12 @@
 #ifndef OT_COMM_NETWORK_DATA_HPP_
 #define OT_COMM_NETWORK_DATA_HPP_
 
-#include <stdint.h>
-
 #include <string>
 
-#include "defines.hpp"
-#include "error.hpp"
+#include <stdint.h>
+
+#include <commissioner/defines.hpp>
+#include <commissioner/error.hpp>
 
 namespace ot {
 
@@ -163,7 +163,7 @@ struct Timestamp
     uint64_t Encode() const;
 };
 
-// static_assert(sizeof(Timestamp) == sizeof(uint64_t), "wrong timestamp size");
+static_assert(sizeof(Timestamp) == sizeof(uint64_t), "wrong timestamp size");
 
 /**
  * A Channel includes ChannelPage and ChannelNumber.

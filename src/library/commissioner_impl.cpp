@@ -31,18 +31,16 @@
  *   The file implements the Commissioner interface.
  */
 
-#include "commissioner_impl.hpp"
+#include "library/commissioner_impl.hpp"
 
-#include <iostream>
-
-#include "coap.hpp"
-#include "cose.hpp"
-#include "dtls.hpp"
-#include "logging.hpp"
-#include "uri.hpp"
-#include "openthread/bloom_filter.hpp"
-#include "openthread/pbkdf2_cmac.hpp"
-#include "openthread/sha256.hpp"
+#include "library/coap.hpp"
+#include "library/cose.hpp"
+#include "library/dtls.hpp"
+#include "library/logging.hpp"
+#include "library/openthread/bloom_filter.hpp"
+#include "library/openthread/pbkdf2_cmac.hpp"
+#include "library/openthread/sha256.hpp"
+#include "library/uri.hpp"
 
 namespace ot {
 
@@ -143,7 +141,6 @@ CommissionerImpl::CommissionerImpl(CommissionerHandler &aHandler, struct event_b
     , mSessionId(0)
     , mCommissionerHandler(aHandler)
     , mEventBase(aEventBase)
-    , mBaQuerier(mEventBase)
     , mKeepAliveTimer(mEventBase, [this](Timer &aTimer) { SendKeepAlive(aTimer); })
     , mBrClient(mEventBase)
     , mCommissioningSessionTimer(mEventBase, [this](Timer &aTimer) { HandleCommissioningSessionTimer(aTimer); })
@@ -313,11 +310,6 @@ void CommissionerImpl::Resign(ErrorHandler aHandler)
     Disconnect();
 
     aHandler(Error::kNone);
-}
-
-void CommissionerImpl::Discover(Handler<std::list<BorderAgent>> aHandler)
-{
-    mBaQuerier.SendQuery(aHandler);
 }
 
 void CommissionerImpl::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort)
@@ -2059,11 +2051,14 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
 
         if (it == mCommissioningSessions.end())
         {
+            Address localAddr;
+
+            SuccessOrExit(error = mBrClient.GetLocalAddr(localAddr));
             it = mCommissioningSessions
                      .emplace(std::piecewise_construct, std::forward_as_tuple(joinerIid),
                               std::forward_as_tuple(*this, *joinerInfo, joinerUdpPort, joinerRouterLocator, joinerIid,
                                                     aRlyRx.GetEndpoint()->GetPeerAddr(),
-                                                    aRlyRx.GetEndpoint()->GetPeerPort()))
+                                                    aRlyRx.GetEndpoint()->GetPeerPort(), localAddr, kCommissioningPort))
                      .first;
             auto &session = it->second;
 
@@ -2095,13 +2090,15 @@ void CommissionerImpl::HandleRlyRx(const coap::Request &aRlyRx)
             }
             else
             {
+                LOG_INFO("commissioning timer started, expiration-time={}",
+                         TimePointToString(session.GetExpirationTime()));
                 mCommissioningSessionTimer.Start(session.GetExpirationTime());
             }
         }
 
         ASSERT(it != mCommissioningSessions.end());
         auto &session = it->second;
-        SuccessOrExit(error = session.RecvJoinerDtlsRecords(dtlsRecords));
+        session.RecvJoinerDtlsRecords(dtlsRecords);
     }
 
 exit:
@@ -2115,9 +2112,11 @@ void CommissionerImpl::HandleCommissioningSessionTimer(Timer &aTimer)
 {
     TimePoint nextShot;
     bool      hasNextShot = false;
+    auto      now         = Clock::now();
 
-    auto now = Clock::now();
-    auto it  = mCommissioningSessions.begin();
+    LOG_DEBUG("commissioning session timer triggered");
+
+    auto it = mCommissioningSessions.begin();
     while (it != mCommissioningSessions.end())
     {
         auto &session = it->second;

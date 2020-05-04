@@ -1,5 +1,5 @@
 /*
- *    Copyright (c) 2019, The OpenThread Authors.
+ *    Copyright (c) 2020, The OpenThread Authors.
  *    All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -28,60 +28,27 @@
 
 /**
  * @file
- *   The file implements Console.
+ *   This file defines test cases of CommissionerSafe.
+ *
  */
 
-#include "app/cli/console.hpp"
+#include <catch2/catch.hpp>
 
-#include <iostream>
-
-#include <readline/history.h>
-#include <readline/readline.h>
+#include "library/commissioner_safe.hpp"
 
 namespace ot {
 
 namespace commissioner {
 
-std::string Console::Read()
+TEST_CASE("stop-immediately-after-starting", "[commissioner]")
 {
-    const char *line = "";
+    Config config;
+    config.mEnableCcm = false;
+    config.mPSKc = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 
-    while (line == nullptr || strlen(line) == 0)
-    {
-        line = readline("> ");
-    }
-
-    add_history(line);
-
-    return line;
-}
-
-void Console::Write(const std::string &aLine, Color aColor)
-{
-    static const std::string kResetCode = "\u001b[0m";
-    std::string              colorCode;
-
-    switch (aColor)
-    {
-    case Color::kDefault:
-    case Color::kWhite:
-        colorCode = "\u001b[37m";
-        break;
-    case Color::kRed:
-        colorCode = "\u001b[31m";
-        break;
-    case Color::kGreen:
-        colorCode = "\u001b[32m";
-        break;
-    case Color::kYellow:
-        colorCode = "\u001b[33m";
-        break;
-    case Color::kBlue:
-        colorCode = "\u001b[34m";
-        break;
-    }
-
-    std::cout << colorCode << aLine << kResetCode << std::endl;
+    // This creates an CommissionerSafe instance.
+    auto commissioner = Commissioner::Create(config, nullptr);
+    REQUIRE(commissioner != nullptr);
 }
 
 } // namespace commissioner

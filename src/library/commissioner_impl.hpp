@@ -29,20 +29,19 @@
 #ifndef OT_COMM_LIBRARY_COMMISSIONER_IMPL_HPP_
 #define OT_COMM_LIBRARY_COMMISSIONER_IMPL_HPP_
 
-#include "tlv.hpp"
-#include <commissioner/commissioner.hpp>
-
 #include <atomic>
 
-#include "coap.hpp"
-#include "coap_secure.hpp"
-#include "commissioning_session.hpp"
-#include "dtls.hpp"
-#include "event.hpp"
-#include "multicast_dns.hpp"
-#include "timer.hpp"
-#include "token_manager.hpp"
-#include "udp_proxy.hpp"
+#include <commissioner/commissioner.hpp>
+
+#include "library/coap.hpp"
+#include "library/coap_secure.hpp"
+#include "library/commissioning_session.hpp"
+#include "library/dtls.hpp"
+#include "library/event.hpp"
+#include "library/timer.hpp"
+#include "library/tlv.hpp"
+#include "library/token_manager.hpp"
+#include "library/udp_proxy.hpp"
 
 namespace ot {
 
@@ -96,9 +95,6 @@ public:
 
     // Stop the commissioner.
     void Stop() override;
-
-    void  Discover(Handler<std::list<BorderAgent>> aHandler) override;
-    Error Discover(std::list<BorderAgent> &) override { return Error::kNotImplemented; }
 
     void  Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort) override;
     Error Connect(const std::string &, uint16_t) override { return Error::kNotImplemented; }
@@ -265,8 +261,6 @@ private:
     struct event_base *  mEventBase;
 
     Config mConfig;
-
-    BorderAgentQuerier mBaQuerier;
 
     Timer mKeepAliveTimer;
 

@@ -51,8 +51,7 @@ target_sources(commissioner
         event.hpp
         logging.cpp
         logging.hpp
-        multicast_dns.cpp
-        multicast_dns.hpp
+        message.hpp
         network_data.cpp
         openthread/bloom_filter.cpp
         openthread/bloom_filter.hpp
@@ -66,7 +65,6 @@ target_sources(commissioner
         openthread/sha256.hpp
         socket.cpp
         socket.hpp
-        time.hpp
         timer.hpp
         tlv.cpp
         tlv.hpp
@@ -88,6 +86,7 @@ target_link_libraries(commissioner
         fmt::fmt
         event_core
         event_pthreads
+        $<$<NOT:$<BOOL:${OT_COMM_ANDROID}>>:pthread>
         commissioner-common
 )
 
@@ -95,6 +94,8 @@ target_include_directories(commissioner
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
 )
 
 install(TARGETS commissioner
@@ -129,4 +130,54 @@ endif()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/commissioner
         DESTINATION include
+)
+
+add_executable(commissioner-test $<$<NOT:$<BOOL:${OT_COMM_TEST}>>:EXCLUDE_FROM_ALL>)
+
+target_sources(commissioner-test
+    PRIVATE
+        coap_secure.hpp
+        coap_secure_test.cpp
+        coap.hpp
+        coap_test.cpp
+        commissioner_impl.hpp
+        commissioner_impl_test.cpp
+        commissioner_safe.hpp
+        commissioner_safe_test.cpp
+        cose.hpp
+        cose_test.cpp
+        dtls.hpp
+        dtls_test.cpp
+        socket.hpp
+        socket_test.cpp
+        token_manager.hpp
+        token_manager_test.cpp
+)
+
+target_link_libraries(commissioner-test
+    PRIVATE
+        Catch2::Catch2
+        cn-cbor::cn-cbor
+        cose
+        mdns
+        mbedtls
+        mbedx509
+        mbedcrypto
+        fmt::fmt
+        event_core
+        event_pthreads
+        commissioner
+        commissioner-common
+        commissioner-app-test
+        commissioner-common-test
+)
+
+target_include_directories(commissioner-test
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/src
+)
+
+set_target_properties(commissioner-test
+    PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
 )

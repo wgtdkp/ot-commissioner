@@ -1,5 +1,6 @@
+#!/bin/bash
 #
-#  Copyright (c) 2019, The OpenThread Authors.
+#  Copyright (c) 2020, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -26,13 +27,30 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if (CMAKE_BUILD_TYPE AND OT_COMM_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-g -O0 --coverage)
-    add_link_options(--coverage)
-endif()
+[ -z "${TEST_ROOT_DIR}" ] && . "$(dirname "$0")"/common.sh
 
-## We don't use target-based functions for enforcing any targets
-## under this directory be compiled with the options.
-add_compile_options(-Wall -Wextra -Werror -Wfatal-errors -Wno-missing-braces)
+test_network_sync()
+{
+    set -e
 
-add_subdirectory(unit)
+    start_otbr "${NON_CCM_NCP}" "eth0"
+    form_network "${PSKC}"
+
+    start_commissioner "${NON_CCM_CONFIG}"
+    send_command_to_commissioner "start :: 49191"
+    send_command_to_commissioner "network sync"
+    stop_commissioner
+}
+
+test_get_commissioner_dataset()
+{
+    set -e
+
+    start_otbr "${NON_CCM_NCP}" "eth0"
+    form_network "${PSKC}"
+
+    start_commissioner "${NON_CCM_CONFIG}"
+    send_command_to_commissioner "start :: 49191"
+    send_command_to_commissioner "commdataset get"
+    stop_commissioner
+}

@@ -33,9 +33,9 @@
 
 #include <commissioner/network_data.hpp>
 
-#include "time.hpp"
-#include <address.hpp>
-#include <utils.hpp>
+#include "common/address.hpp"
+#include "common/time.hpp"
+#include "common/utils.hpp"
 
 namespace ot {
 

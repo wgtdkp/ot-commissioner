@@ -34,18 +34,17 @@
 #ifndef OT_COMM_COMMISSIONER_HPP_
 #define OT_COMM_COMMISSIONER_HPP_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <functional>
 #include <list>
 #include <memory>
 #include <string>
 
-#include "border_agent.hpp"
-#include "defines.hpp"
-#include "error.hpp"
-#include "network_data.hpp"
+#include <stddef.h>
+#include <stdint.h>
+
+#include <commissioner/defines.hpp>
+#include <commissioner/error.hpp>
+#include <commissioner/network_data.hpp>
 
 namespace ot {
 
@@ -350,22 +349,6 @@ public:
      *
      */
     virtual void Stop() = 0;
-
-    /**
-     * @brief Asynchronously discover Thread Network at link-local.
-     *
-     * @param[in, out] aHandler  A handler of the response and errors; Guaranteed to be called.
-     */
-    virtual void Discover(Handler<std::list<BorderAgent>> aHandler) = 0;
-
-    /**
-     * @brief Synchronously discover Thread Network at link-local.
-     *
-     * @param[out] aBorderAgentList  A list of discovered border agent.
-     *
-     * @return Error::kNone, succeed; otherwise, failed;
-     */
-    virtual Error Discover(std::list<BorderAgent> &aBorderAgentList) = 0;
 
     /**
      * @brief Asynchronously connect to a Thread network.

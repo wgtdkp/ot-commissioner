@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,12 +28,11 @@
 
 /**
  * @file
- *   This file includes definitions for CRC16 computations.
- *
+ *   This file includes definitions for abstract message.
  */
 
-#ifndef OT_COMM_LIBRARY_OPENTHREAD_CRC16_HPP_
-#define OT_COMM_LIBRARY_OPENTHREAD_CRC16_HPP_
+#ifndef OT_COMM_LIBRARY_MESSAGE_HPP_
+#define OT_COMM_LIBRARY_MESSAGE_HPP_
 
 #include <stdint.h>
 
@@ -42,55 +41,20 @@ namespace ot {
 namespace commissioner {
 
 /**
- * This class implements CRC16 computations.
+ * This class represents the message sub-type.
+ *
+ * It is designed to carry additional information about
+ * the message when processed by low-level transporter.
  *
  */
-class Crc16
+enum class MessageSubType : uint8_t
 {
-public:
-    enum class Polynomial
-    {
-        kCcitt = 0x1021, ///< CRC16_CCITT
-        kAnsi  = 0x8005, ///< CRC16-ANSI
-    };
-
-    /**
-     * This constructor initializes the object.
-     *
-     * @param[in]  aPolynomial  The polynomial value.
-     *
-     */
-    explicit Crc16(Polynomial aPolynomial);
-
-    /**
-     * This method initializes the CRC16 computation.
-     *
-     */
-    void Init(void) { mCrc = 0; }
-
-    /*c*
-     * This method feeds a byte value into the CRC16 computation.
-     *
-     * @param[in]  aByte  The byte value.
-     *
-     */
-    void Update(uint8_t aByte);
-
-    /**
-     * This method gets the current CRC16 value.
-     *
-     * @returns The current CRC16 value.
-     *
-     */
-    uint16_t Get(void) const { return mCrc; }
-
-private:
-    uint16_t mPolynomial;
-    uint16_t mCrc;
+    kNone = 0,        ///< None
+    kJoinFinResponse, ///< Joiner Finalize Response (JOIN_FIN.rsp)
 };
 
 } // namespace commissioner
 
 } // namespace ot
 
-#endif // OT_COMM_LIBRARY_OPENTHREAD_CRC16_HPP_
+#endif // OT_COMM_LIBRARY_MESSAGE_HPP_

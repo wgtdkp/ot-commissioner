@@ -1,5 +1,5 @@
 /*
- *    Copyright (c) 2019, The OpenThread Authors.
+ *    Copyright (c) 2020, The OpenThread Authors.
  *    All rights reserved.
  *
  *    Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,31 @@
 
 /**
  * @file
- *   This file is for including Catch2's main function.
+ *   This file implements time measurements.
  */
 
-#define CATCH_CONFIG_MAIN
+#include "time.hpp"
 
-#include "catch2/catch.hpp"
+#include <time.h>
+
+#include <iomanip>
+#include <sstream>
+
+namespace ot {
+
+namespace commissioner {
+
+std::string TimePointToString(const TimePoint &aTimePoint)
+{
+    struct tm         localTime;
+    std::time_t       time = Clock::to_time_t(aTimePoint);
+    std::stringstream ss;
+
+    localtime_r(&time, &localTime);
+    ss << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
+
+} // namespace commissioner
+
+} // namespace ot
