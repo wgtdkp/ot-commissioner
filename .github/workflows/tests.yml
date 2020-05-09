@@ -50,9 +50,6 @@ jobs:
           cmake --build build
           sudo cmake --install build
           commissioner-cli -v
-      - name: Run unittests
-        run: |
-          ./build/tests/commissioner-test
       - name: Run integration tests
         run: |
           cd tests/integration
