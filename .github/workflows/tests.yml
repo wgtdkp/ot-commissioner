@@ -59,6 +59,9 @@ jobs:
           cd tests/integration
           ./bootstrap.sh
           ./run_tests.sh
+          cd ../../
+          lcov --directory build/ --capture --output-file coverage.info
+          lcov --list coverage.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:
