@@ -103,6 +103,8 @@ template <> struct adl_serializer<ot::commissioner::ByteArray>
 };
 } // namespace nlohmann
 
+
+
 namespace ot {
 
 namespace commissioner {
