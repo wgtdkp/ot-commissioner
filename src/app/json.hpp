@@ -72,10 +72,6 @@ std::string PendingDatasetToJson(const PendingOperationalDataset &aDataset);
 
 Error ConfigFromJson(Config &aConfig, const std::string &aJson);
 
-std::string EnergyReportToJson(const EnergyReport &aEnergyReport);
-
-std::string EnergyReportMapToJson(const EnergyReportMap &aEnergyReportMap);
-
 } // namespace commissioner
 
 } // namespace ot

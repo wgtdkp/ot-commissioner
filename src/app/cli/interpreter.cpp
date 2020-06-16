@@ -39,7 +39,7 @@
 #include "app/json.hpp"
 #include "common/error_macros.hpp"
 #include "common/utils.hpp"
-
+#include <iostream>
 namespace ot {
 
 namespace commissioner {
@@ -123,10 +123,8 @@ const std::map<std::string, std::string> &Interpreter::mUsageMap = *new std::map
     {"migrate", "migrate <device-addr> <designated-network-name>"},
     {"mlr", "mlr (<multicast-addr>)+ <timeout-in-seconds>"},
     {"announce", "announce <channel-mask> <count> <period> <dst-addr>"},
-    {"panid", "panid query <channel-mask> <panid> <dst-addr>\n"
-              "panid conflict <panid>"},
-    {"energy", "energy scan <channel-mask> <count> <period> <scan-duration> <dst-addr>\n"
-               "energy report [<dst-addr>]"},
+    {"panid", "panid <channel-mask> <panid> <dst-addr> <timeout-in-seconds>"},
+    {"energy", "energy <channel-mask> <count> <period> <scan-duration> <dst-addr> <timeout-in-seconds>"},
     {"help", "help [<command>]"},
 };
 
@@ -224,7 +222,7 @@ Interpreter::Value Interpreter::Eval(const Expression &aExpr)
     evaluator = mEvaluatorMap.find(ToLower(aExpr.front()));
     if (evaluator == mEvaluatorMap.end())
     {
-        ExitNow(value = ERROR_INVALID_ARGS("invalid commands: {}; type 'help' for all commands", aExpr.front()));
+        ExitNow(value = ERROR_INVALID_COMMAND("'{}' is not a valid command, type 'help' for all commands", aExpr.front()));
     }
 
     value = evaluator->second(this, aExpr);
@@ -922,31 +920,16 @@ exit:
 Interpreter::Value Interpreter::ProcessPanId(const Expression &aExpr)
 {
     Value value;
+    uint32_t channelMask;
+    uint16_t panId;
+    uint32_t timeout;
 
-    VerifyOrExit(aExpr.size() >= 2, value = ERROR_INVALID_ARGS("too few arguments"));
+    VerifyOrExit(aExpr.size() >= 5, value = ERROR_INVALID_ARGS("too few arguments"));
 
-    if (CaseInsensitiveEqual(aExpr[1], "query"))
-    {
-        uint32_t channelMask;
-        uint16_t panId;
-        VerifyOrExit(aExpr.size() >= 5, value = ERROR_INVALID_ARGS("too few arguments"));
-        SuccessOrExit(value = ParseInteger(channelMask, aExpr[2]));
-        SuccessOrExit(value = ParseInteger(panId, aExpr[3]));
-        SuccessOrExit(value = mCommissioner->PanIdQuery(channelMask, panId, aExpr[4]));
-    }
-    else if (CaseInsensitiveEqual(aExpr[1], "conflict"))
-    {
-        uint16_t panId;
-        bool     conflict;
-        VerifyOrExit(aExpr.size() >= 3, value = ERROR_INVALID_ARGS("too few arguments"));
-        SuccessOrExit(value = ParseInteger(panId, aExpr[2]));
-        conflict = mCommissioner->HasPanIdConflict(panId);
-        value    = std::to_string(conflict);
-    }
-    else
-    {
-        value = ERROR_INVALID_COMMAND("{} is not a valid sub-command", aExpr[1]);
-    }
+    SuccessOrExit(value = ParseInteger(channelMask, aExpr[1]));
+    SuccessOrExit(value = ParseInteger(panId, aExpr[2]));
+    SuccessOrExit(value = ParseInteger(timeout, aExpr[4]));
+    SuccessOrExit(value = mCommissioner->PanIdQuery(PanIdQueryHandler, channelMask, panId, aExpr[3], CommissionerApp::Seconds(timeout)));
 
 exit:
     return value;
@@ -955,42 +938,19 @@ exit:
 Interpreter::Value Interpreter::ProcessEnergy(const Expression &aExpr)
 {
     Value value;
+    uint32_t channelMask;
+    uint8_t  count;
+    uint16_t period;
+    uint16_t scanDuration;
+    uint32_t timeout;
 
-    VerifyOrExit(aExpr.size() >= 2, value = ERROR_INVALID_ARGS("too few arguments"));
-
-    if (CaseInsensitiveEqual(aExpr[1], "scan"))
-    {
-        uint32_t channelMask;
-        uint8_t  count;
-        uint16_t period;
-        uint16_t scanDuration;
-        VerifyOrExit(aExpr.size() >= 7, value = ERROR_INVALID_ARGS("too few arguments"));
-        SuccessOrExit(value = ParseInteger(channelMask, aExpr[2]));
-        SuccessOrExit(value = ParseInteger(count, aExpr[3]));
-        SuccessOrExit(value = ParseInteger(period, aExpr[4]));
-        SuccessOrExit(value = ParseInteger(scanDuration, aExpr[5]));
-        SuccessOrExit(value = mCommissioner->EnergyScan(channelMask, count, period, scanDuration, aExpr[6]));
-    }
-    else if (CaseInsensitiveEqual(aExpr[1], "report"))
-    {
-        if (aExpr.size() >= 3)
-        {
-            const EnergyReport *report = nullptr;
-            Address             dstAddr;
-            SuccessOrExit(value = dstAddr.Set(aExpr[2]));
-            report = mCommissioner->GetEnergyReport(dstAddr);
-            value  = report == nullptr ? "null" : EnergyReportToJson(*report);
-        }
-        else
-        {
-            auto reports = mCommissioner->GetAllEnergyReports();
-            value        = reports.empty() ? "null" : EnergyReportMapToJson(reports);
-        }
-    }
-    else
-    {
-        value = ERROR_INVALID_COMMAND("{} is not a valid sub-command", aExpr[1]);
-    }
+    VerifyOrExit(aExpr.size() >= 7, value = ERROR_INVALID_ARGS("too few arguments"));
+    SuccessOrExit(value = ParseInteger(channelMask, aExpr[1]));
+    SuccessOrExit(value = ParseInteger(count, aExpr[2]));
+    SuccessOrExit(value = ParseInteger(period, aExpr[3]));
+    SuccessOrExit(value = ParseInteger(scanDuration, aExpr[4]));
+    SuccessOrExit(value = ParseInteger(timeout, aExpr[6]));
+    SuccessOrExit(value = mCommissioner->EnergyScan(EnergyScanHandler, channelMask, count, period, scanDuration, aExpr[5], CommissionerApp::Seconds(timeout)));
 
 exit:
     return value;
@@ -1017,6 +977,7 @@ Interpreter::Value Interpreter::ProcessHelp(const Expression &aExpr)
             data += kv.first + "\n";
         }
         data += "\ntype 'help <command>' for help of specific command.";
+        value = data;
     }
     else
     {
@@ -1040,6 +1001,28 @@ void Interpreter::BorderAgentHandler(const BorderAgent *aBorderAgent, const Erro
         ASSERT(aBorderAgent != nullptr);
         Console::Write(ToString(*aBorderAgent), Console::Color::kGreen);
     }
+}
+
+void Interpreter::PanIdQueryHandler(const std::string &aPeerAddr, const ChannelMask &aChannelMask, uint16_t aPanId)
+{
+    std::string ret;
+
+    ret += "peerAddr=" + aPeerAddr + "\n";
+    ret += ToString(aChannelMask) + "\n";
+    ret += "panId=" + ToHex(aPanId) + "\n";
+
+    Console::Write(ret, Console::Color::kGreen);
+}
+
+void Interpreter::EnergyScanHandler(const std::string &aPeerAddr, const ChannelMask &aChannelMask, const ByteArray &aEnergyList)
+{
+    std::string ret;
+
+    ret += "peerAddr=" + aPeerAddr + "\n";
+    ret += ToString(aChannelMask) + "\n";
+    ret += "energyList=" + utils::Hex(aEnergyList) + "\n";
+
+    Console::Write(ret, Console::Color::kGreen);
 }
 
 const std::string Interpreter::Usage(Expression aExpr)
@@ -1114,8 +1097,8 @@ std::string Interpreter::ToString(const ChannelMask &aChannelMask)
     std::string ret;
     for (const auto &entry : aChannelMask)
     {
-        ret += "page=" + std::to_string(entry.mPage) + "\n";
-        ret += "masks=" + utils::Hex(entry.mMasks) + "\n";
+        ret += "channelMask.page=" + std::to_string(entry.mPage) + "\n";
+        ret += "channelMask.masks=" + utils::Hex(entry.mMasks) + "\n";
     }
     if (!ret.empty())
     {
@@ -1129,14 +1112,6 @@ std::string Interpreter::ToString(const SecurityPolicy &aSecurityPolicy)
     std::string ret;
     ret += "rotationTime=" + std::to_string(aSecurityPolicy.mRotationTime) + "\n";
     ret += "flags=" + utils::Hex(aSecurityPolicy.mFlags);
-    return ret;
-}
-
-std::string Interpreter::ToString(const EnergyReport &aReport)
-{
-    std::string ret;
-    ret += ToString(aReport.mChannelMask) + "\n";
-    ret += "energyList=" + utils::Hex(aReport.mEnergyList);
     return ret;
 }
 

@@ -34,6 +34,7 @@
 #include "app/commissioner_app.hpp"
 
 #include <algorithm>
+#include <thread>
 
 #include "app/file_util.hpp"
 #include "app/json.hpp"
@@ -101,8 +102,6 @@ void CommissionerApp::Stop()
     IgnoreError(mCommissioner->Resign());
 
     mJoiners.clear();
-    mPanIdConflicts.clear();
-    mEnergyReports.clear();
     mActiveDataset  = ActiveOperationalDataset();
     mPendingDataset = PendingOperationalDataset();
     mCommDataset    = MakeDefaultCommissionerDataset();
@@ -951,52 +950,44 @@ exit:
     return error;
 }
 
-Error CommissionerApp::PanIdQuery(uint32_t aChannelMask, uint16_t aPanId, const std::string &aDstAddr)
+Error CommissionerApp::PanIdQuery(PanIdQueryHandler aHandler, uint32_t aChannelMask, uint16_t aPanId, const std::string &aDstAddr, Seconds aTimeout)
 {
     Error error;
 
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
+
+    mPanIdQueryHandler = aHandler;
 
     SuccessOrExit(error = mCommissioner->PanIdQuery(aChannelMask, aPanId, aDstAddr));
 
+    std::this_thread::sleep_for(aTimeout);
+    mPanIdQueryHandler = nullptr;
+
 exit:
     return error;
 }
 
-bool CommissionerApp::HasPanIdConflict(uint16_t aPanId) const
-{
-    return mPanIdConflicts.count(aPanId) != 0;
-}
-
-Error CommissionerApp::EnergyScan(uint32_t           aChannelMask,
+Error CommissionerApp::EnergyScan(EnergyScanHandler  aHandler,
+                                  uint32_t           aChannelMask,
                                   uint8_t            aCount,
                                   uint16_t           aPeriod,
                                   uint16_t           aScanDuration,
-                                  const std::string &aDstAddr)
+                                  const std::string &aDstAddr,
+                                  Seconds aTimeout)
 {
     Error error;
 
     VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
 
+    mEnergyScanHandler = aHandler;
+
     SuccessOrExit(error = mCommissioner->EnergyScan(aChannelMask, aCount, aPeriod, aScanDuration, aDstAddr));
+
+    std::this_thread::sleep_for(aTimeout);
+    mEnergyScanHandler = nullptr;
 
 exit:
     return error;
-}
-
-const EnergyReport *CommissionerApp::GetEnergyReport(const Address &aDstAddr) const
-{
-    auto report = mEnergyReports.find(aDstAddr);
-    if (report == mEnergyReports.end())
-    {
-        return nullptr;
-    }
-    return &report->second;
-}
-
-const EnergyReportMap &CommissionerApp::GetAllEnergyReports() const
-{
-    return mEnergyReports;
 }
 
 const std::string &CommissionerApp::GetDomainName() const
@@ -1284,22 +1275,20 @@ void CommissionerApp::OnKeepAliveResponse(Error aError)
 
 void CommissionerApp::OnPanIdConflict(const std::string &aPeerAddr, const ChannelMask &aChannelMask, uint16_t aPanId)
 {
-    (void)aPeerAddr;
-
-    // FIXME(wgtdkp): synchronization
-    mPanIdConflicts[aPanId] = aChannelMask;
+    if (mPanIdQueryHandler != nullptr)
+    {
+        mPanIdQueryHandler(aPeerAddr, aChannelMask, aPanId);
+    }
 }
 
 void CommissionerApp::OnEnergyReport(const std::string &aPeerAddr,
                                      const ChannelMask &aChannelMask,
                                      const ByteArray &  aEnergyList)
 {
-    Address addr;
-
-    SuccessOrDie(addr.Set(aPeerAddr));
-
-    // FIXME(wgtdkp): synchronization
-    mEnergyReports[addr] = {aChannelMask, aEnergyList};
+    if (mEnergyScanHandler != nullptr)
+    {
+        mEnergyScanHandler(aPeerAddr, aChannelMask, aEnergyList);
+    }
 }
 
 void CommissionerApp::OnDatasetChanged()

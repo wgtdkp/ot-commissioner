@@ -515,16 +515,6 @@ static void from_json(const Json &aJson, NetworkData &aNetworkData)
 #undef SET_IF_PRESENT
 }
 
-static void to_json(Json &aJson, const EnergyReport &aEnergyReport)
-{
-#define SET(name) aJson[#name] = aEnergyReport.m##name
-
-    SET(ChannelMask);
-    SET(EnergyList);
-
-#undef SET
-}
-
 Error NetworkDataFromJson(NetworkData &aNetworkData, const std::string &aJson)
 {
     Error error;
@@ -661,29 +651,6 @@ Error ConfigFromJson(Config &aConfig, const std::string &aJson)
     }
 
     return error;
-}
-
-std::string EnergyReportToJson(const EnergyReport &aEnergyReport)
-{
-    Json json = aEnergyReport;
-    return json.dump(/* indent */ 4);
-}
-
-std::string EnergyReportMapToJson(const EnergyReportMap &aEnergyReportMap)
-{
-    Json json;
-
-    // Manually create json object because the key is not std::string and
-    // the JSON library will map `aEnergyReportMap` into JSON array.
-    for (auto &kv : aEnergyReportMap)
-    {
-        auto &deviceAddr = kv.first;
-        auto &report     = kv.second;
-
-        VerifyOrDie(deviceAddr.IsValid());
-        json[deviceAddr.ToString()] = report;
-    }
-    return json.dump(/* indent */ 4);
 }
 
 } // namespace commissioner

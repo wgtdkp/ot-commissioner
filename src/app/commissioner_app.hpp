@@ -55,13 +55,6 @@ namespace ot {
 
 namespace commissioner {
 
-struct EnergyReport
-{
-    ChannelMask mChannelMask;
-    ByteArray   mEnergyList;
-};
-using EnergyReportMap = std::map<Address, EnergyReport>;
-
 /**
  * @brief Enumeration of Joiner Type for steering.
  *
@@ -97,6 +90,8 @@ class CommissionerApp : public CommissionerHandler
 public:
     using MilliSeconds = std::chrono::milliseconds;
     using Seconds      = std::chrono::seconds;
+    using PanIdQueryHandler = std::function<void(const std::string &aPeerAddr, const ChannelMask &aChannelMask, uint16_t aPanId)>;
+    using EnergyScanHandler = std::function<void (const std::string &aPeerAddr, const ChannelMask &aChannelMask, const ByteArray &  aEnergyList)>;
 
     static Error Create(std::shared_ptr<CommissionerApp> &aCommApp, const Config &aConfig);
     ~CommissionerApp() = default;
@@ -234,15 +229,14 @@ public:
     Error Migrate(const std::string &aDstAddr, const std::string &aDesignatedNetwork);
     Error RegisterMulticastListener(const std::vector<std::string> &aMulticastAddrList, Seconds aTimeout);
     Error AnnounceBegin(uint32_t aChannelMask, uint8_t aCount, MilliSeconds aPeriod, const std::string &aDtsAddr);
-    Error PanIdQuery(uint32_t aChannelMask, uint16_t aPanId, const std::string &aDstAddr);
-    bool  HasPanIdConflict(uint16_t aPanId) const;
-    Error EnergyScan(uint32_t           aChannelMask,
+    Error PanIdQuery(PanIdQueryHandler aHandler, uint32_t aChannelMask, uint16_t aPanId, const std::string &aDstAddr, Seconds aTimeout);
+    Error EnergyScan(EnergyScanHandler  aHandler,
+                     uint32_t           aChannelMask,
                      uint8_t            aCount,
                      uint16_t           aPeriod,
                      uint16_t           aScanDuration,
-                     const std::string &aDstAddr);
-    const EnergyReport *   GetEnergyReport(const Address &aDstAddr) const;
-    const EnergyReportMap &GetAllEnergyReports() const;
+                     const std::string &aDstAddr,
+                     Seconds aTimeout);
 
     /*
      * Others
@@ -287,12 +281,13 @@ private:
     ByteArray mSignedToken;
 
 private:
+    PanIdQueryHandler mPanIdQueryHandler;
+    EnergyScanHandler mEnergyScanHandler;
+
     /*
      * Below are data associated with the connected Thread Network.
      */
     std::map<JoinerKey, JoinerInfo> mJoiners;
-    std::map<uint16_t, ChannelMask> mPanIdConflicts;
-    EnergyReportMap                 mEnergyReports;
     ActiveOperationalDataset        mActiveDataset;
     PendingOperationalDataset       mPendingDataset;
     CommissionerDataset             mCommDataset;

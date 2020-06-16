@@ -123,6 +123,8 @@ private:
     Value ProcessHelp(const Expression &aExpr);
 
     static void BorderAgentHandler(const BorderAgent *aBorderAgent, const Error &aError);
+    static void PanIdQueryHandler(const std::string &aPeerAddr, const ChannelMask &aChannelMask, uint16_t aPanId);
+    static void EnergyScanHandler(const std::string &aPeerAddr, const ChannelMask &aChannelMask, const ByteArray &aEnergyList);
 
     static const std::string Usage(Expression aExpr);
     static Error             GetJoinerType(JoinerType &aType, const std::string &aStr);
@@ -131,7 +133,6 @@ private:
     static std::string       ToString(const Channel &aChannel);
     static std::string       ToString(const ChannelMask &aChannelMask);
     static std::string       ToString(const SecurityPolicy &aSecurityPolicy);
-    static std::string       ToString(const EnergyReport &aReport);
     static std::string       ToString(const BorderAgent &aBorderAgent);
     static std::string       ToString(const BorderAgent::State &aState);
     static std::string       BaConnModeToString(uint32_t aConnMode);
