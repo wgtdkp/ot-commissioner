@@ -65,11 +65,6 @@ if (OT_COMM_TEST)
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include
             ${PROJECT_SOURCE_DIR}/src
-    )
-
-    target_link_libraries(commissioner-common-test
-        PRIVATE
-            Catch2::Catch2
-            commissioner-common
+            ${PROJECT_SOURCE_DIR}/third_party/Catch2/repo/single_include
     )
 endif()

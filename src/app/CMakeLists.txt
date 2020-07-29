@@ -76,13 +76,9 @@ if (OT_COMM_TEST)
 
     target_include_directories(commissioner-app-test
         PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
             ${PROJECT_SOURCE_DIR}/src
-    )
-
-    target_link_libraries(commissioner-app-test
-        PRIVATE
-            Catch2::Catch2
-            commissioner-app
+            ${PROJECT_SOURCE_DIR}/third_party/Catch2/repo/single_include
     )
 endif()
 
