@@ -64,9 +64,12 @@ jobs:
         gcc_ver: [5, 6, 7, 8, 9]
     steps:
       - uses: actions/checkout@v2
-      - name: Install CMake 3.10.1
+      - name: Uninstall CMake 3.10.1
         run: |
           sudo rm -rf $(which cmake)
+          cmake --version
+      - name: Install CMake 3.10.1
+        run: |
           wget https://cmake.org/files/v3.10/cmake-3.10.1.zip
           unzip cmake-3.10.1
           cd cmake-3.10.1
