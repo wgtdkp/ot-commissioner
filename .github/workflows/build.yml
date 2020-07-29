@@ -66,14 +66,11 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install CMake 3.10.1
         run: |
-          existing_cmake="$(which cmake)"
           wget https://cmake.org/files/v3.10/cmake-3.10.1.zip
           unzip cmake-3.10.1
           cd cmake-3.10.1
           cmake .
           make -j4
-
-          sudo rm -rf "${existing_cmake}"
           sudo make install
           cmake --version
       - name: Bootstrap
