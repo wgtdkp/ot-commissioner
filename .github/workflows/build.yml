@@ -79,6 +79,7 @@ jobs:
       - name: Build
         run: |
           gcc --version
+          mkdir build
           cmake -GNinja                           \
                 -DBUILD_SHARED_LIBS=ON            \
                 -DCMAKE_CXX_STANDARD=11           \
