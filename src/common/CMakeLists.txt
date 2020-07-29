@@ -26,18 +26,15 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(commissioner-common)
-
-target_sources(commissioner-common
-    PRIVATE
-        address.cpp
-        address.hpp
-        error.cpp
-        error_macros.hpp
-        time.cpp
-        time.hpp
-        utils.cpp
-        utils.hpp
+add_library(commissioner-common
+    address.cpp
+    address.hpp
+    error.cpp
+    error_macros.hpp
+    time.cpp
+    time.hpp
+    utils.cpp
+    utils.hpp
 )
 
 target_link_libraries(commissioner-common
@@ -58,13 +55,10 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 if (OT_COMM_TEST)
-    add_library(commissioner-common-test OBJECT)
-
-    target_sources(commissioner-common-test
-        PRIVATE
-            address.hpp
-            address_test.cpp
-            error_test.cpp
+    add_library(commissioner-common-test OBJECT
+        address.hpp
+        address_test.cpp
+        error_test.cpp
     )
 
     target_include_directories(commissioner-common-test
