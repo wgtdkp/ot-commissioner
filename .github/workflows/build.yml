@@ -123,8 +123,8 @@ jobs:
           make -j4
           sudo make install
       - name: CMake version
-          run: |
-            cmake --version
+        run: |
+          cmake --version
       - name: Bootstrap
         run: |
           brew unlink cmake
