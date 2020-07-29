@@ -112,14 +112,24 @@ jobs:
     runs-on: macos-10.15
     steps:
       - uses: actions/checkout@v2
+      - name: Install CMake 3.10.1
+        run: |
+          brew unlink cmake
+          wget https://cmake.org/files/v3.10/cmake-3.10.1.zip
+          unzip cmake-3.10.1
+          cd cmake-3.10.1
+          chmod +x bootstrap
+          ./bootstrap
+          make -j4
+          sudo make install
+      - name: CMake version
+          run: |
+            cmake --version
       - name: Bootstrap
         run: |
           brew unlink cmake
           brew install cmake@3.10.1
           script/bootstrap.sh
-      - name: CMake version
-        run: |
-          cmake --version
       - name: Build
         run: |
           cmake -G"Unix Makefiles"                \
