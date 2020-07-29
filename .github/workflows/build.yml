@@ -79,18 +79,18 @@ jobs:
       - name: Build
         run: |
           gcc --version
-          mkdir build
+          mkdir build && cd build
           cmake -GNinja                           \
                 -DBUILD_SHARED_LIBS=ON            \
                 -DCMAKE_CXX_STANDARD=11           \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON  \
                 -DCMAKE_BUILD_TYPE=Release        \
                 -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -S . -B build
-          cmake --build build
-          sudo cmake --install build
+                ..
+          ninja
+          sudo ninja install
           commissioner-cli -v
-          ./build/tests/commissioner-test
+          ./tests/commissioner-test
 
   clang-build:
     name: clang-${{ matrix.clang_ver }}
@@ -106,17 +106,18 @@ jobs:
       - name: Build
         run: |
           clang --version
+          mkdir build && cd build
           cmake -GNinja                           \
                 -DBUILD_SHARED_LIBS=ON            \
                 -DCMAKE_CXX_STANDARD=11           \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON  \
                 -DCMAKE_BUILD_TYPE=Release        \
                 -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -S . -B build
-          cmake --build build
-          sudo cmake --install build
+                ..
+          ninja
+          sudo ninja install
           commissioner-cli -v
-          ./build/tests/commissioner-test
+          ./tests/commissioner-test
 
   macos:
     runs-on: macos-10.15
@@ -127,16 +128,17 @@ jobs:
           script/bootstrap.sh
       - name: Build
         run: |
+          mkdir build && cd build
           cmake -G"Unix Makefiles"                \
                 -DCMAKE_CXX_STANDARD=11           \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON  \
                 -DCMAKE_BUILD_TYPE=Release        \
                 -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -S . -B build
-          cmake --build build -j2
-          sudo cmake --install build
+                ..
+          make -j2
+          sudo make install
           commissioner-cli -v
-          ./build/tests/commissioner-test
+          ./tests/commissioner-test
 
   android-ndk:
     runs-on: ubuntu-18.04
@@ -147,6 +149,7 @@ jobs:
           script/bootstrap.sh
       - name: Build
         run: |
+          mkdir build && cd build
           cmake -GNinja                                                                             \
                 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk-bundle/build/cmake/android.toolchain.cmake \
                 -DANDROID_ABI="armeabi-v7a"                                                         \
@@ -159,8 +162,8 @@ jobs:
                 -DOT_COMM_ANDROID=ON                                                                \
                 -DOT_COMM_APP=OFF                                                                   \
                 -DOT_COMM_TEST=OFF                                                                  \
-                -S . -B build
-          cmake --build build
+                ..
+          ninja
 
   java-binding:
     runs-on: macos-10.15
@@ -172,14 +175,15 @@ jobs:
           brew install swig@4
       - name: Build
         run: |
+          mkdir build && cd build
           cmake -GNinja                          \
                 -DBUILD_SHARED_LIBS=ON           \
                 -DCMAKE_CXX_STANDARD=11          \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON \
                 -DCMAKE_BUILD_TYPE=Release       \
                 -DOT_COMM_JAVA_BINDING=ON        \
-                -S . -B build
-          cmake --build build
+                ..
+          ninja
 
   fmt-format-check:
     runs-on: ubuntu-18.04
@@ -190,11 +194,12 @@ jobs:
           script/bootstrap.sh
       - name: Build
         run: |
+          mkdir build && cd build
           cmake -GNinja                           \
                 -DBUILD_SHARED_LIBS=ON            \
                 -DCMAKE_CXX_STANDARD=14           \
                 -DCMAKE_CXX_STANDARD_REQUIRED=ON  \
                 -DCMAKE_BUILD_TYPE=Release        \
                 -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -S . -B build
-          cmake --build build
+                ..
+          ninja
