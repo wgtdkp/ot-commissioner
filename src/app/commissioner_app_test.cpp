@@ -54,39 +54,39 @@ TEST_CASE("pskd-validation", "[pskd]")
 
     SECTION("A PSKd shorter than 6 characters should be rejected")
     {
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "00001") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "00001") == ErrorCode::kInvalidArgs);
     }
 
     SECTION("A PSKd longer than 32 characters should be rejected")
     {
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "000000000000000000000000000000001").GetCode() ==
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "000000000000000000000000000000001").GetCode() ==
                 ErrorCode::kInvalidArgs);
     }
 
     SECTION("A PSKd including invalid characters should be rejected")
     {
         // Includes capital 'O' at the end.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "00000O") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "00000O") == ErrorCode::kInvalidArgs);
 
         // Includes capital 'I' at the end.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "11111I") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "11111I") == ErrorCode::kInvalidArgs);
 
         // Includes capital 'Q' at the end.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "99999Q") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "99999Q") == ErrorCode::kInvalidArgs);
 
         // Includes capital 'Z' at the end.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "22222Z") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "22222Z") == ErrorCode::kInvalidArgs);
 
         // Includes lowercase alphanumeric characters.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "abcedf") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "abcedf") == ErrorCode::kInvalidArgs);
 
         // Includes non-alphanumeric characters.
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "+-#$%@") == ErrorCode::kInvalidArgs);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "+-#$%@") == ErrorCode::kInvalidArgs);
     }
 
     SECTION("A compliant PSKd should be accepted and kInvalidState error is expected")
     {
-        REQUIRE(commApp->EnableJoiner(JoinerType::kMeshCoP, eui64, "PSKD01") == ErrorCode::kInvalidState);
+        REQUIRE(commApp->AddJoiner(JoinerType::kMeshCoP, eui64, "PSKD01") == ErrorCode::kInvalidState);
     }
 }
 

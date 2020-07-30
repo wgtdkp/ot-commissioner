@@ -30,6 +30,7 @@
 #define OT_COMM_LIBRARY_COMMISSIONER_IMPL_HPP_
 
 #include <atomic>
+#include <list>
 #include <memory>
 
 #include <commissioner/commissioner.hpp>
@@ -48,18 +49,105 @@ namespace ot {
 
 namespace commissioner {
 
-// This is the implementation of the Commissioner interface with
-// event-driven model. The commissioner is not running unless the
-// the event loop has been started. Starting the event loop will
-// block current thread and it's not safe to calling any API in
-// a separate thread without synchronization. This requires the
-// user of this class making everything event-driven, which is
-// not feasible for general applications. A solution is to run
-// the event loop in a background thread and synchronize each call
-// of the API with the event loop thread (see commissioner_safe.hpp).
-//
-// This class provides the implementation of the core Thread
-// Commissioner features without consideration of usability.
+/**
+ * @brief The Commissioner Dataset of the Thread Network Data.
+ *
+ * Each data field of Commissioner Dataset is optional. The field is
+ * meaningful only when associative PresentFlags is included in
+ * `mPresentFlags`.
+ *
+ */
+struct CommissionerDataset
+{
+    /**
+     * The RLOC16 of the Border Agent.
+     * Read only, always present for a read operation.
+     * Ignored by a write operation.
+     */
+    uint16_t mBorderAgentLocator = 0;
+
+    /**
+     * The Commissioner Session ID.
+     * Read only, always present for a read operation.
+     * Ignored by a write operation.
+     */
+    uint16_t mSessionId = 0;
+
+    /**
+     * @brief The MeshCoP Steering Data.
+     *
+     * This contains the Bloom Filter as provided by the Commissioner,
+     * and specified in Section 8.4.4.3, to signal which set of
+     * Joiner Identifiers (Joiner ID) are permitted to join.
+     */
+    ByteArray mSteeringData;
+
+    /**
+     * @brief The AE Steering Data.
+     *
+     * Controls which joiner is allowed for CCM Autonomous Enrollment.
+     * Defined for only CCM network.
+     */
+    ByteArray mAeSteeringData;
+
+    /**
+     * @brief The NMKP Steering Data.
+     *
+     * Controls which joiner is allowed for CCM Network Masterkey Provisioning.
+     * Defined for only CCM network.
+     */
+    ByteArray mNmkpSteeringData;
+
+    /**
+     * @brief The MeshCoP Joiner UDP Port.
+     *
+     * Used by a 1.1 non-CCM joiner to perform MeshCoP joining.
+     */
+    uint16_t mJoinerUdpPort = 0;
+
+    /**
+     * @brief The AE UDP Port.
+     *
+     * Used by a CCM joiner to perform AE joining.
+     * Defined for only CCM network.
+     */
+    uint16_t mAeUdpPort = 0;
+
+    /**
+     * @brief The NMKP UDP Port.
+     *
+     * Used by a CCM joiner to perform CCM NMKP.
+     * Defined for only CCM network.
+     */
+    uint16_t mNmkpUdpPort = 0;
+
+    /**
+     * Indicates which fields are included in the dataset.
+     */
+    uint16_t mPresentFlags = 0;
+
+    static constexpr uint16_t kBorderAgentLocatorBit = (1 << 15);
+    static constexpr uint16_t kSessionIdBit          = (1 << 14);
+    static constexpr uint16_t kSteeringDataBit       = (1 << 13);
+    static constexpr uint16_t kAeSteeringDataBit     = (1 << 12);
+    static constexpr uint16_t kNmkpSteeringDataBit   = (1 << 11);
+    static constexpr uint16_t kJoinerUdpPortBit      = (1 << 10);
+    static constexpr uint16_t kAeUdpPortBit          = (1 << 9);
+    static constexpr uint16_t kNmkpUdpPortBit        = (1 << 8);
+};
+
+/** This is the implementation of the Commissioner interface with
+ * event-driven model. The commissioner is not running unless the
+ * the event loop has been started. Starting the event loop will
+ * block current thread and it's not safe to calling any API in
+ * a separate thread without synchronization. This requires the
+ * user of this class making everything event-driven, which is
+ * not feasible for general applications. A solution is to run
+ * the event loop in a background thread and synchronize each call
+ * of the API with the event loop thread (see commissioner_safe.hpp).
+ *
+ * This class provides the implementation of the core Thread
+ * Commissioner features without consideration of usability.
 //
 // Note: for requests, only async APIs are implemented.
 //
@@ -101,6 +189,11 @@ public:
 
     void  Resign(ErrorHandler aHandler) override;
     Error Resign() override { return ERROR_UNIMPLEMENTED(""); }
+
+    void AddJoiner(ErrorHandler aHandler, const JoinerInfo &aJoinerInfo) override;
+    Error AddJoiner(const JoinerInfo &) override { return ERROR_UNIMPLEMENTED(""); }
+    void ClearJoiner(ErrorHandler aHandler, JoinerType aJoinerType) override;
+    Error ClearJoiner(JoinerType) override { return ERROR_UNIMPLEMENTED(""); }
 
     void  GetCommissionerDataset(Handler<CommissionerDataset> aHandler, uint16_t aDatasetFlags) override;
     Error GetCommissionerDataset(CommissionerDataset &, uint16_t) override { return ERROR_UNIMPLEMENTED(""); }
@@ -210,6 +303,9 @@ private:
     static ByteArray GetBbrDatasetTlvs(uint16_t aDatasetFlags);
 #endif
 
+    JoinerInfo *FindBestMatchingJoiner(const ByteArray &aJoinerId);
+    CommissionerDataset MakeDefaultCommissionerDataset();
+    static void CommDatasetAddJoiner(CommissionerDataset &aDataset, const JoinerInfo &aJoinerInfo);
     static Error     DecodeCommissionerDataset(CommissionerDataset &aDataset, const coap::Response &aResponse);
     static Error     EncodeCommissionerDataset(coap::Request &aRequest, const CommissionerDataset &aDataset);
     static ByteArray GetCommissionerDatasetTlvs(uint16_t aDatasetFlags);
@@ -241,7 +337,9 @@ private:
     State    mState;
     uint16_t mSessionId; ///< The Commissioner Session ID.
 
-private:
+    std::list<JoinerInfo> mJoinerList;
+    CommissionerDataset mCommDataset;
+
     /*
      * Implementation data.
      */

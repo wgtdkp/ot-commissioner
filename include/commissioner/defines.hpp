@@ -99,6 +99,11 @@ static constexpr size_t kMaxSteeringDataLength = 16;
 static constexpr size_t kJoinerIdLength = 8;
 
 /**
+ * The Maximum joiner Discerner length in bits.
+ */
+static constexpr size_t kMaxJoinerDiscernerBitLength = 64;
+
+/**
  * The Joiner Router KEK length.
  */
 static constexpr size_t kJoinerRouterKekLength = 16;

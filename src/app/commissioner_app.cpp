@@ -45,14 +45,6 @@ namespace ot {
 
 namespace commissioner {
 
-JoinerInfo::JoinerInfo(JoinerType aType, uint64_t aEui64, const std::string &aPSKd, const std::string &aProvisioningUrl)
-    : mType(aType)
-    , mEui64(aEui64)
-    , mPSKd(aPSKd)
-    , mProvisioningUrl(aProvisioningUrl)
-{
-}
-
 Error CommissionerApp::Create(std::shared_ptr<CommissionerApp> &aCommApp, const Config &aConfig)
 {
     Error error;
@@ -211,7 +203,7 @@ Error CommissionerApp::GetSteeringData(ByteArray &aSteeringData, JoinerType aJoi
         aSteeringData = mCommDataset.mSteeringData;
         break;
 
-    case JoinerType::kAE:
+    case JoinerType::kCcmAe:
         VerifyOrExit((mCommDataset.mPresentFlags & CommissionerDataset::kAeSteeringDataBit),
                      error = ERROR_NOT_FOUND("cannot find Thread CCM AE Steering Data"));
         aSteeringData = mCommDataset.mAeSteeringData;
@@ -228,34 +220,9 @@ exit:
     return error;
 }
 
-Error CommissionerApp::EnableJoiner(JoinerType         aType,
-                                    uint64_t           aEui64,
-                                    const std::string &aPSKd,
-                                    const std::string &aProvisioningUrl)
+Error CommissionerApp::AddJoiner(const JoinerInfo &aJoinerInfo)
 {
-    Error error;
-    auto  joinerId    = Commissioner::ComputeJoinerId(aEui64);
-    auto  commDataset = mCommDataset;
-    commDataset.mPresentFlags &= ~CommissionerDataset::kSessionIdBit;
-    commDataset.mPresentFlags &= ~CommissionerDataset::kBorderAgentLocatorBit;
-    auto &steeringData = GetSteeringData(commDataset, aType);
-
-    SuccessOrExit(error = ValidatePSKd(aPSKd));
-
-    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
-
-    VerifyOrExit(mJoiners.count({aType, joinerId}) == 0,
-                 error = ERROR_ALREADY_EXISTS("joiner(type={}, EUI64={:X}) has already been enabled",
-                                              utils::to_underlying(aType), aEui64));
-
-    Commissioner::AddJoiner(steeringData, joinerId);
-    SuccessOrExit(error = mCommissioner->SetCommissionerDataset(commDataset));
-
-    MergeDataset(mCommDataset, commDataset);
-    mJoiners.emplace(JoinerKey{aType, joinerId}, JoinerInfo{aType, aEui64, aPSKd, aProvisioningUrl});
-
-exit:
-    return error;
+    return mCommissioner->AddJoiner(aJoinerInfo);
 }
 
 Error CommissionerApp::DisableJoiner(JoinerType aType, uint64_t aEui64)
@@ -351,7 +318,7 @@ Error CommissionerApp::GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJo
         aJoinerUdpPort = mCommDataset.mJoinerUdpPort;
         break;
 
-    case JoinerType::kAE:
+    case JoinerType::kCcmAe:
         VerifyOrExit(mCommDataset.mPresentFlags & CommissionerDataset::kAeUdpPortBit,
                      error = ERROR_NOT_FOUND("cannot find Thread CCM AE UDP Port"));
         aJoinerUdpPort = mCommDataset.mAeUdpPort;
@@ -1061,52 +1028,6 @@ CommissionerDataset CommissionerApp::MakeDefaultCommissionerDataset()
     }
 
     return dataset;
-}
-
-ByteArray &CommissionerApp::GetSteeringData(CommissionerDataset &aDataset, JoinerType aJoinerType)
-{
-    switch (aJoinerType)
-    {
-    case JoinerType::kMeshCoP:
-        aDataset.mPresentFlags |= CommissionerDataset::kSteeringDataBit;
-        return aDataset.mSteeringData;
-
-    case JoinerType::kAE:
-        aDataset.mPresentFlags |= CommissionerDataset::kAeSteeringDataBit;
-        return aDataset.mAeSteeringData;
-
-    case JoinerType::kNMKP:
-        aDataset.mPresentFlags |= CommissionerDataset::kNmkpSteeringDataBit;
-        return aDataset.mNmkpSteeringData;
-
-    default:
-        VerifyOrDie(false);
-        aDataset.mPresentFlags |= CommissionerDataset::kSteeringDataBit;
-        return aDataset.mSteeringData;
-    }
-}
-
-uint16_t &CommissionerApp::GetJoinerUdpPort(CommissionerDataset &aDataset, JoinerType aJoinerType)
-{
-    switch (aJoinerType)
-    {
-    case JoinerType::kMeshCoP:
-        aDataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
-        return aDataset.mJoinerUdpPort;
-
-    case JoinerType::kAE:
-        aDataset.mPresentFlags |= CommissionerDataset::kAeUdpPortBit;
-        return aDataset.mAeUdpPort;
-
-    case JoinerType::kNMKP:
-        aDataset.mPresentFlags |= CommissionerDataset::kNmkpUdpPortBit;
-        return aDataset.mNmkpUdpPort;
-
-    default:
-        VerifyOrDie(false);
-        aDataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
-        return aDataset.mJoinerUdpPort;
-    }
 }
 
 size_t CommissionerApp::EraseAllJoiners(JoinerType aJoinerType)

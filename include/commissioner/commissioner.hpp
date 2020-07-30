@@ -44,6 +44,7 @@
 
 #include <commissioner/defines.hpp>
 #include <commissioner/error.hpp>
+#include <commissioner/joiner.hpp>
 #include <commissioner/network_data.hpp>
 
 namespace ot {
@@ -503,7 +504,13 @@ public:
      */
     virtual Error Resign() = 0;
 
+    virtual void AddJoiner(ErrorHandler aHandler, const JoinerInfo &aJoinerInfo) = 0;
+    virtual Error AddJoiner(const JoinerInfo &aJoinerInfo) = 0;
+    virtual void ClearJoiner(ErrorHandler aHandler, JoinerType aJoinerType) = 0;
+    virtual Error ClearJoiner(JoinerType aJoinerType) = 0;
+
     /**
+     * @deprecated
      * @brief Asynchronously get the Commissioner Dataset.
      *
      * This method request Commissioner Dataset from the leader of the Thread network
@@ -516,6 +523,7 @@ public:
     virtual void GetCommissionerDataset(Handler<CommissionerDataset> aHandler, uint16_t aDatasetFlags) = 0;
 
     /**
+     * @deprecated
      * @brief Synchronously get the Commissioner Dataset.
      *
      * This method request Commissioner Dataset from the leader of the Thread network
@@ -530,6 +538,7 @@ public:
     virtual Error GetCommissionerDataset(CommissionerDataset &aDataset, uint16_t aDatasetFlags) = 0;
 
     /**
+     * @deprecated
      * @brief Asynchronously set the Commissioner Dataset.
      *
      * This method set Commissioner Dataset of the Thread network
@@ -542,6 +551,7 @@ public:
     virtual void SetCommissionerDataset(ErrorHandler aHandler, const CommissionerDataset &aDataset) = 0;
 
     /**
+     * @deprecated
      * @brief Synchronously set the Commissioner Dataset.
      *
      * This method set Commissioner Dataset of the Thread network
@@ -1102,19 +1112,14 @@ public:
                               const ByteArray &  aExtendedPanId);
 
     /**
-     * @brief Compute joiner ID with its IEEE EUI-64 value.
-     *
-     * @param[in] aEui64  A IEEE EUI-64 value of the joiner.
-     *
-     * @return The joiner ID.
-     */
-    static ByteArray ComputeJoinerId(uint64_t aEui64);
-
-    /**
      * @brief Add the joiner to specific steering data with bloom filter.
      *
      * @param[in, out] aSteeringData  The steering data encoded to.
-     * @param[in]      aJoinerId      A Joiner ID.
+     * @param[in]      aJoinerId      A Joiner ID. It can be the value returned
+     *                                by ComputeJoinerId or arbitrary byte array
+     *                                as long as it matches the one used by the
+     *                                Joiner device.
+     *
      */
     static void AddJoiner(ByteArray &aSteeringData, const ByteArray &aJoinerId);
 

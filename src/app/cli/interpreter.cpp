@@ -486,7 +486,7 @@ Interpreter::Value Interpreter::ProcessJoiner(const Expression &aExpr)
             }
         }
 
-        SuccessOrExit(value = mCommissioner->EnableJoiner(type, eui64, pskd, provisioningUrl));
+        SuccessOrExit(value = mCommissioner->AddJoiner(type, eui64, pskd, provisioningUrl));
     }
     else if (CaseInsensitiveEqual(aExpr[1], "enableall"))
     {
@@ -1061,7 +1061,7 @@ Error Interpreter::GetJoinerType(JoinerType &aType, const std::string &aStr)
     }
     else if (CaseInsensitiveEqual(aStr, "ae"))
     {
-        aType = JoinerType::kAE;
+        aType = JoinerType::kCcmAe;
     }
     else if (CaseInsensitiveEqual(aStr, "nmkp"))
     {

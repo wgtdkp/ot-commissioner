@@ -36,6 +36,7 @@
 #include "library/coap.hpp"
 #include "library/cose.hpp"
 #include "library/dtls.hpp"
+#include "library/joiner_internal.hpp"
 #include "library/logging.hpp"
 #include "library/openthread/bloom_filter.hpp"
 #include "library/openthread/pbkdf2_cmac.hpp"
@@ -85,25 +86,6 @@ exit:
     return error;
 }
 
-ByteArray Commissioner::ComputeJoinerId(uint64_t aEui64)
-{
-    Sha256    sha256;
-    uint8_t   hash[Sha256::kHashSize];
-    ByteArray eui64;
-
-    utils::Encode(eui64, aEui64);
-
-    sha256.Start();
-    sha256.Update(&eui64[0], eui64.size());
-    sha256.Finish(hash);
-
-    static_assert(sizeof(hash) >= kJoinerIdLength, "wrong crypto::Sha256::kHashSize value");
-
-    ByteArray joinerId{hash, hash + kJoinerIdLength};
-    joinerId[0] |= kLocalExternalAddrMask;
-    return joinerId;
-}
-
 void Commissioner::AddJoiner(ByteArray &aSteeringData, const ByteArray &aJoinerId)
 {
     if (aSteeringData.size() != kMaxSteeringDataLength)
@@ -143,6 +125,7 @@ exit:
 CommissionerImpl::CommissionerImpl(CommissionerHandler &aHandler, struct event_base *aEventBase)
     : mState(State::kDisabled)
     , mSessionId(0)
+    , mCommDataset(MakeDefaultCommissionerDataset())
     , mCommissionerHandler(aHandler)
     , mEventBase(aEventBase)
     , mKeepAliveTimer(mEventBase, [this](Timer &aTimer) { SendKeepAlive(aTimer); })
@@ -1755,6 +1738,184 @@ ByteArray CommissionerImpl::GetBbrDatasetTlvs(uint16_t aDatasetFlags)
     return tlvTypes;
 }
 #endif // OT_COMM_CONFIG_CCM_ENABLE
+
+void CommissionerImpl::AddJoiner(ErrorHandler aHandler, const JoinerInfo &aJoinerInfo)
+{
+    Error error;
+    ByteArray joinerId; //    = Commissioner::ComputeJoinerId(aEui64);
+    CommissionerDataset commDataset = mCommDataset;
+
+    SuccessOrExit(error = ValidateJoiner(aJoinerInfo));
+    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
+
+    // Session ID and Border Agent Locator are read-only data, clear them.
+    commDataset.mPresentFlags &= ~CommissionerDataset::kSessionIdBit;
+    commDataset.mPresentFlags &= ~CommissionerDataset::kBorderAgentLocatorBit;
+
+    CommDatasetAddJoiner(commDataset, aJoinerInfo);
+
+    //VerifyOrExit(mJoiners.count({aType, joinerId}) == 0,
+    //             error = ERROR_ALREADY_EXISTS("joiner(type={}, EUI64={:X}) has already been enabled",
+    //                                          utils::to_underlying(aType), aEui64));
+
+    {
+        auto onResponse = [=](Error aError) {
+          if (aError == ERROR_NONE)
+          {
+              AddJoinerEntry(aJoinerInfo);
+              mCommDataset = commDataset;
+          }
+          aHandler(aError);
+        };
+        SetCommissionerDataset(onResponse, commDataset);
+    }
+
+    MergeDataset(mCommDataset, commDataset);
+    mJoiners.emplace(JoinerKey{aType, joinerId}, JoinerInfo{aType, aEui64, aPSKd, aProvisioningUrl});
+
+exit:
+    return error;
+}
+
+void CommissionerImpl::ClearJoiner(ErrorHandler aHandler, JoinerType aJoinerType)
+{
+    Error error;
+    auto  commDataset = mCommDataset;
+    commDataset.mPresentFlags &= ~CommissionerDataset::kSessionIdBit;
+    commDataset.mPresentFlags &= ~CommissionerDataset::kBorderAgentLocatorBit;
+    auto &steeringData = GetSteeringData(commDataset, aType);
+
+    VerifyOrExit(IsActive(), error = ERROR_INVALID_STATE("the commissioner is not active"));
+
+    // Set steering data to all 0 to disable all joiners.
+    steeringData = {0x00};
+    SuccessOrExit(error = mCommissioner->SetCommissionerDataset(commDataset));
+
+    MergeDataset(mCommDataset, commDataset);
+    EraseAllJoiners(aType);
+
+    exit:
+    return error;
+}
+
+JoinerInfo *CommissionerImpl::FindBestMatchingJoiner(const ByteArray &aJoinerId)
+{
+    JoinerInfo *best = nullptr;
+    ByteArray joinerId;
+
+    // Prefer a full Joiner ID match, if not found use the entry
+    // accepting any joiner.
+
+    for (JoinerInfo &joiner : mJoinerList)
+    {
+        switch (joiner.mType)
+        {
+        case JoinerType::kMeshCoPAny:
+            if (best == nullptr)
+            {
+                best = &joiner;
+            }
+            break;
+
+        case JoinerType::kMeshCoPEui64:
+            if (ComputeJoinerId(joiner.mEui64) == aJoinerId)
+            {
+                ExitNow(best = &joiner);
+            }
+            break;
+
+        case JoinerType::kMeshCoPDiscerner:
+            if (joiner.mSharedId.mDiscerner.Matches(aReceivedJoinerId))
+            {
+                if ((best == nullptr) ||
+                    ((best->mType == Joiner::kTypeDiscerner) &&
+                     (best->mSharedId.mDiscerner.GetLength() < joiner.mSharedId.mDiscerner.GetLength())))
+                {
+                    best = &joiner;
+                }
+            }
+            break;
+        }
+    }
+
+exit:
+    return best;
+}
+
+CommissionerDataset CommissionerImpl::MakeDefaultCommissionerDataset()
+{
+    CommissionerDataset dataset;
+
+    // Resize steering datas.
+    dataset.mSteeringData.assign(kMaxSteeringDataLength, 0);
+    dataset.mAeSteeringData.assign(kMaxSteeringDataLength, 0);
+    dataset.mNmkpSteeringData.assign(kMaxSteeringDataLength, 0);
+
+    dataset.mJoinerUdpPort = kDefaultJoinerUdpPort;
+    dataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
+
+#if OT_COMM_CONFIG_CCM_ENABLE
+    if (IsCcmMode())
+    {
+        dataset.mAeUdpPort = kDefaultAeUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kAeUdpPortBit;
+        dataset.mNmkpUdpPort = kDefaultNmkpUdpPort;
+        dataset.mPresentFlags |= CommissionerDataset::kNmkpUdpPortBit;
+    }
+#endif
+
+    return dataset;
+}
+
+void CommissionerImpl::CommDatasetAddJoiner(CommissionerDataset &aDataset, const JoinerInfo &aJoinerInfo)
+{
+    switch (aJoinerInfo.mType)
+    {
+    case JoinerType::kMeshCoPAny:
+        aDataset.mPresentFlags |= CommissionerDataset::kSteeringDataBit;
+        aDataset.mSteeringData.assign(kMaxSteeringDataLength, 0xFF);
+        break;
+    case JoinerType::kMeshCoPEui64:
+        aDataset.mPresentFlags |= CommissionerDataset::kSteeringDataBit;
+        ComputeBloomFilter(aDataset.mSteeringData, ComputeJoinerId(aJoinerInfo.mEui64));
+        break;
+    case JoinerType::kMeshCoPDiscerner:
+        aDataset.mPresentFlags |= CommissionerDataset::kSteeringDataBit;
+        ComputeBloomFilter(aDataset.mSteeringData, ComputeJoinerId(aJoinerInfo.mDiscerner));
+        break;
+    case JoinerType::kCcmAe:
+        aDataset.mPresentFlags |= CommissionerDataset::kAeSteeringDataBit;
+        ComputeBloomFilter(aDataset.mAeSteeringData, ComputeJoinerId(aJoinerInfo.mEui64));
+        break;
+    case JoinerType::kCcmNmkp:
+        aDataset.mPresentFlags |= CommissionerDataset::kNmkpSteeringDataBit;
+        ComputeBloomFilter(aDataset.mNmkpSteeringData, ComputeJoinerId(aJoinerInfo.mEui64));
+        break;
+    }
+}
+
+uint16_t &CommissionerImpl::GetJoinerUdpPort(CommissionerDataset &aDataset, JoinerType aJoinerType)
+{
+    switch (aJoinerType)
+    {
+    case JoinerType::kMeshCoP:
+        aDataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
+        return aDataset.mJoinerUdpPort;
+
+    case JoinerType::kCcmAe:
+        aDataset.mPresentFlags |= CommissionerDataset::kAeUdpPortBit;
+        return aDataset.mAeUdpPort;
+
+    case JoinerType::kNMKP:
+        aDataset.mPresentFlags |= CommissionerDataset::kNmkpUdpPortBit;
+        return aDataset.mNmkpUdpPort;
+
+    default:
+        VerifyOrDie(false);
+        aDataset.mPresentFlags |= CommissionerDataset::kJoinerUdpPortBit;
+        return aDataset.mJoinerUdpPort;
+    }
+}
 
 Error CommissionerImpl::DecodeCommissionerDataset(CommissionerDataset &aDataset, const coap::Response &aResponse)
 {

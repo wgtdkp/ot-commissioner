@@ -61,36 +61,6 @@ struct EnergyReport
 };
 using EnergyReportMap = std::map<Address, EnergyReport>;
 
-/**
- * @brief Enumeration of Joiner Type for steering.
- *
- */
-enum class JoinerType
-{
-    kMeshCoP = 0, ///< Conventional non-CCM joiner.
-    kAE,          ///< CCM AE joiner.
-    kNMKP         ///< CCM NMKP joiner.
-};
-
-/**
- * @brief Definition of joiner information.
- */
-struct JoinerInfo
-{
-    JoinerType mType;
-
-    // If the value is all-zeros, it represents for all joiners of this type.
-    uint64_t mEui64; ///< The IEEE EUI-64 value.
-
-    // Valid only if mType is kMeshCoP.
-    std::string mPSKd; ///< The pre-shared device key.
-
-    // Valid only if mType is kMeshCoP.
-    std::string mProvisioningUrl;
-
-    JoinerInfo(JoinerType aType, uint64_t aEui64, const std::string &aPSKd, const std::string &aProvisioningUrl);
-};
-
 class CommissionerApp : public CommissionerHandler
 {
 public:
@@ -147,13 +117,10 @@ public:
     Error GetBorderAgentLocator(uint16_t &aLocator) const;
 
     Error GetSteeringData(ByteArray &aSteeringData, JoinerType aJoinerType) const;
-    Error EnableJoiner(JoinerType         aType,
-                       uint64_t           aEui64,
-                       const std::string &aPSKd            = {},
-                       const std::string &aProvisioningUrl = {});
-    Error DisableJoiner(JoinerType aType, uint64_t aEui64);
-    Error EnableAllJoiners(JoinerType aType, const std::string &aPSKd, const std::string &aProvisioningUrl);
-    Error DisableAllJoiners(JoinerType aType);
+    Error AddJoiner(const JoinerInfo &aJoinerInfo);
+    Error DisableJoiner(const JoinerInfo &aJoinerInfo);
+    Error EnableAllJoiners(const JoinerInfo &aJoinerInfo);
+    Error DisableAllJoiners(const JoinerInfo &aJoinerInfo);
 
     Error GetJoinerUdpPort(uint16_t &aJoinerUdpPort, JoinerType aJoinerType) const;
     Error SetJoinerUdpPort(JoinerType aType, uint16_t aUdpPort);
@@ -266,9 +233,6 @@ private:
     };
 
     CommissionerDataset MakeDefaultCommissionerDataset();
-
-    static ByteArray &GetSteeringData(CommissionerDataset &aDataset, JoinerType aJoinerType);
-    static uint16_t & GetJoinerUdpPort(CommissionerDataset &aDataset, JoinerType aJoinerType);
 
     // Erases all joiner with specific type. Returns the number of erased joiners.
     size_t      EraseAllJoiners(JoinerType aJoinerType);
