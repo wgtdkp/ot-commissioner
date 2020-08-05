@@ -29,7 +29,7 @@
 
 [ -z "${TEST_ROOT_DIR}" ] && . "$(dirname "$0")"/common.sh
 
-test_active_dataset_set_network_name() {
+test_active_dataset() {
     set -e
 
     start_daemon
@@ -38,16 +38,31 @@ test_active_dataset_set_network_name() {
     start_commissioner "${NON_CCM_CONFIG}"
     send_command_to_commissioner "start :: 49191"
     send_command_to_commissioner "active"
+
+    send_command_to_commissioner "opdataset get activetimestamp"
+
+    send_command_to_commissioner "opdataset set channelmask 0 ffffffff"
+    send_command_to_commissioner "opdataset get channelmask" "ffffffff"
+
+    send_command_to_commissioner "opdataset set xpanid 0001020304050607"
+    send_command_to_commissioner "opdataset get xpanid" "0001020304050607"
+
     send_command_to_commissioner "opdataset set networkname test-network"
+    send_command_to_commissioner "opdataset get networkname" "test-network"
 
-    ## TODO(wgtdkp): verify the result
-    send_command_to_commissioner "opdataset get networkname"
+    send_command_to_commissioner "opdataset set pskc 00112233445566778899aabbccddeeff"
+    send_command_to_commissioner "opdataset get pskc" "00112233445566778899aabbccddeeff"
+
+    send_command_to_commissioner "opdataset set securitypolicy 256 ef"
+    send_command_to_commissioner "opdataset get securitypolicy" "ef"
+
+    send_command_to_commissioner "opdataset get active"
+
     stop_commissioner
-
     stop_daemon
 }
 
-test_pending_dataset_set_channel() {
+test_pending_dataset() {
     set -e
 
     start_daemon
@@ -56,16 +71,27 @@ test_pending_dataset_set_channel() {
     start_commissioner "${NON_CCM_CONFIG}"
     send_command_to_commissioner "start :: 49191"
     send_command_to_commissioner "active"
+
     send_command_to_commissioner "opdataset set channel 0 17 60"
 
-    ## TODO(wgtdkp): wait and verify the result
-    send_command_to_commissioner "opdataset get channel"
+    ## Waiting for the pending operational dataset to become active.
+    sleep 1
+    send_command_to_commissioner "opdataset get channel" "17"
+
+    send_command_to_commissioner "opdataset set meshlocalprefix fdde:ad00:beef:0/64 60"
+    sleep 1
+    send_command_to_commissioner "opdataset get meshlocalprefix" "fdde:ad00:beef:0/64"
+
+    send_command_to_commissioner "opdataset set networkmasterkey 00112233445566778899aabbccddeeff 60"
+    sleep 1
+    send_command_to_commissioner "opdataset get networkmasterkey" "00112233445566778899aabbccddeeff"
+
+    send_command_to_commissioner "opdataset set panid 0xbeef 60"
+    sleep 1
+    send_command_to_commissioner "opdataset get panid" "0xbeef"
+
+    send_command_to_commissioner "opdataset get pending"
+
     stop_commissioner
-
     stop_daemon
-}
-
-test_secure_pending_dataset() {
-    ## TODO(wgtdkp): openthread-ccm doesn't implement SEC_PEDNING_SET yet.
-    echo "not implemented yet."
 }
