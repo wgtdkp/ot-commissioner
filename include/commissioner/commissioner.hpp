@@ -1148,6 +1148,8 @@ public:
      */
     static void AddJoiner(ByteArray &aSteeringData, const ByteArray &aJoinerId);
 
+
+
     /**
      * @brief Get the Thread mesh local address of given 16bits mesh local prefix and locator.
      *
