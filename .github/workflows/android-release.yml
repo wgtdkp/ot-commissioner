@@ -43,6 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Check Release Version
+        id: check_release_version
         run: |
           echo "github.event.action : ${{ github.event.action }}"
           echo "github.event_name : ${{ github.event_name }}"
@@ -60,9 +61,9 @@ jobs:
             exit 1
           fi
 
-          export release_version=$gradle_version
+          echo "::set-output name=release_version::${gradle_version}"
 
-          echo "release_version : ${release_version}"
+          echo "release_version : ${{ steps.check_release_version.outputs.release_version }}"
       - name: Bootstrap
         run: |
           script/bootstrap.sh
@@ -74,8 +75,8 @@ jobs:
           cd openthread_commissioner
           ./gradlew assembleDebug
 
-          echo "release_version : ${release_version}"
-          cp app/build/outputs/apk/debug/app-debug.apk ot-commissioner-app-debug-${release_version}.apk
+          echo "release_version : ${{ steps.check_release_version.outputs.release_version }}"
+          cp app/build/outputs/apk/debug/app-debug.apk ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
       - uses: actions/upload-artifact@v2
         with:
           name: ot-commissioner-app-apk
