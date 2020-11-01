@@ -31,13 +31,11 @@
 
 name: Android App Release
 
-on:
-  push:
-    branches:
-      - 'android-release/**'
+on: pull_request
 
 jobs:
   release-build:
+    if: contains(github.ref, 'android-release')
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
