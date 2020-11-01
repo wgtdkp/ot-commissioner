@@ -32,7 +32,7 @@
 name: Android App Release
 
 on:
-  push:
+  pull_request:
     branches:
       - 'android-release/**'
 
