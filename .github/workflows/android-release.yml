@@ -31,10 +31,7 @@
 
 name: Android App Release
 
-on:
-  push:
-    branches:
-      - 'android-release/**'
+on: pull_request
 
 jobs:
   release-build:
