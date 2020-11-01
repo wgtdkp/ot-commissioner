@@ -35,6 +35,7 @@ on: pull_request
 
 jobs:
   release-build:
+    # We run this job only when the PR branch starts with 'android-release/'.
     if: startsWith(github.head_ref, 'android-release/')
     runs-on: ubuntu-20.04
     steps:
@@ -42,6 +43,9 @@ jobs:
       - name: Check Release Version
         run: |
           GITHUB_HEAD_REF=${{ github.head_ref }}
+
+        # The PR branch should has the format 'android-release/<release-version>'.
+        # <release-version> should equal to versionName defined in the gradle file.
           branch_version="${GITHUB_HEAD_REF##*/}"
           gradle_version="$(cd android/openthread_commissioner && ./gradlew -q printVersionName)"
 
