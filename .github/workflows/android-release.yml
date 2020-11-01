@@ -61,6 +61,8 @@ jobs:
           fi
 
           export release_version=$gradle_version
+
+          echo "release_version : ${release_version}"
       - name: Bootstrap
         run: |
           script/bootstrap.sh
