@@ -76,7 +76,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ot-commissioner-app-apk
-          path: ./android/openthread_commissioner/ot-commissioner-app-debug-${release_version}.apk
+          path: ./android/openthread_commissioner/ot-commissioner-app-debug-*.apk
 
   create-release:
     needs: build-release
