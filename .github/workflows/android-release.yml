@@ -31,7 +31,9 @@
 
 name: Android App Release
 
-on: pull_request
+on:
+  pull_request:
+    types: [assigned, opened, synchronize, reopened, closed]
 
 jobs:
   release-build:
