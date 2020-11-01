@@ -62,8 +62,6 @@ jobs:
           fi
 
           echo "::set-output name=release_version::${gradle_version}"
-
-          echo "release_version : ${{ steps.check_release_version.outputs.release_version }}"
       - name: Bootstrap
         run: |
           script/bootstrap.sh
@@ -75,7 +73,6 @@ jobs:
           cd openthread_commissioner
           ./gradlew assembleDebug
 
-          echo "release_version : ${{ steps.check_release_version.outputs.release_version }}"
           cp app/build/outputs/apk/debug/app-debug.apk ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
       - uses: actions/upload-artifact@v2
         with:
