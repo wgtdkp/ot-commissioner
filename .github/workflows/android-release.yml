@@ -35,7 +35,7 @@ on: pull_request
 
 jobs:
   release-build:
-    if: contains(github.ref, 'android-release')
+    # if: contains(github.ref, 'android-release')
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
@@ -43,6 +43,8 @@ jobs:
         run: |
           branch_version="${GITHUB_REF##*/}"
           gradle_version="$(cd android/openthread_commissioner && ./gradlew -q printVersionName)"
+
+          echo "github.ref : ${{ github.ref }}"
 
           if [ $branch_version != $gradle_version ]; then
             echo "branch name should be android-release/${gradle_version}!"
