@@ -74,10 +74,17 @@ jobs:
           ./gradlew assembleDebug
 
           cp app/build/outputs/apk/debug/app-debug.apk ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
-      - uses: actions/upload-artifact@v2
+      - name: Create New Release
+        # We create the release only when this PR is merged.
+        if: ${{ github.event.pull_request.merged == 'true' }}
+        uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          name: ot-commissioner-app-apk
-          path: ./android/openthread_commissioner/*.apk
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ steps.check_release_version.outputs.release_version }}"
+          prerelease: false
+          title: "OT Commissioner App"
+          files: |
+            ./android/openthread_commissioner/ot-commissioner-app-debug-*.apk
 
   create-release:
     needs: build-release
