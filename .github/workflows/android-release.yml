@@ -70,7 +70,7 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "0.0.1"
+          automatic_release_tag: "android-app-v${release_version}"
           prerelease: false
           title: "OT Commissioner App"
           files: |
