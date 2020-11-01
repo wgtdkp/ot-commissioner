@@ -44,6 +44,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check Release Version
         run: |
+          echo "github.event.action : ${{ github.event.action }}"
+          echo "github.event_name : ${{ github.event_name }}"
+
           GITHUB_HEAD_REF=${{ github.head_ref }}
 
           # The PR branch should has the format 'android-release/<release-version>'.
