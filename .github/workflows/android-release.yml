@@ -45,12 +45,6 @@ jobs:
       - name: Check Release Version
         id: check_release_version
         run: |
-          echo "github.event.action : ${{ github.event.action }}"
-          echo "github.event_name : ${{ github.event_name }}"
-          echo "github.event.pull_request.merged : ${{ github.event.pull_request.merged }}"
-
-          GITHUB_HEAD_REF=${{ github.head_ref }}
-
           # The PR branch should has the format 'android-release/<release-version>'.
           # <release-version> should equal to versionName defined in the gradle file.
           branch_version="${GITHUB_HEAD_REF##*/}"
@@ -74,9 +68,12 @@ jobs:
           cd openthread_commissioner
           ./gradlew assembleDebug
 
-          cp app/build/outputs/apk/debug/app-debug.apk ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
       - name: Create New Release
         # We create the release only when this PR is merged.
+        # For some reason, github.event.pull_request.merged
+        # doesn't work at here.
         if: ${{ steps.check_release_version.outputs.pr_merged == 'true' }}
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -86,22 +83,3 @@ jobs:
           title: "OT Commissioner App"
           files: |
             ./android/openthread_commissioner/ot-commissioner-app-debug-*.apk
-
-  create-release:
-    needs: build-release
-    runs-on: ubuntu-20.04
-    # We create the release only when this PR is merged.
-    if: github.event.pull_request.merged == 'true'
-    steps:
-      - name: Download a single artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: ot-commissioner-app-apk
-      - name: Create New Release
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          title: "OT Commissioner App"
-          files: |
-            ot-commissioner-app-debug-*.apk
