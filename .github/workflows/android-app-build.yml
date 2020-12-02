@@ -55,3 +55,48 @@ jobs:
           api-level: ${{ matrix.android-api }}
           arch: ${{ matrix.android-abi }}
           script: "cd android/openthread_commissioner && ./gradlew connectedAndroidTest"
+
+  release-build:
+    runs-on: ubuntu-20.04
+    # We run this job only when the PR branch starts with 'android-release/'.
+    if: startsWith(github.head_ref, 'android-release/')
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check Release Version
+        id: check_release_version
+        run: |
+          # The PR branch should has the format 'android-release/<release-version>'.
+          # <release-version> should equal to versionName defined in the gradle file.
+          branch_version="${GITHUB_HEAD_REF##*/}"
+          gradle_version="$(cd android/openthread_commissioner && ./gradlew -q printVersionName)"
+
+          if [ $branch_version != $gradle_version ]; then
+            echo "branch name should be android-release/${gradle_version}!"
+            exit 1
+          fi
+
+          echo "::set-output name=release_version::${gradle_version}"
+      - name: Bootstrap
+        run: |
+          script/bootstrap.sh
+      - name: Build
+        run: |
+          cd android
+          # Build native libs for both architectures.
+          ANDROID_ABI=armeabi-v7a ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle ./build-commissioner-libs.sh
+          ANDROID_ABI=arm64-v8a ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle ./build-commissioner-libs.sh
+          cd openthread_commissioner
+          ./gradlew assembleDebug
+
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             ot-commissioner-app-debug-${{ steps.check_release_version.outputs.release_version }}.apk
+      - name: Create New Release
+        if: success() && github.repository == 'openthread/ot-commissioner' && github.event_name != 'pull_request'
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ steps.check_release_version.outputs.release_version }}"
+          prerelease: false
+          title: "OT Commissioner App ${{ steps.check_release_version.outputs.release_version }}"
+          files: |
+            ./android/openthread_commissioner/ot-commissioner-app-debug-*.apk
