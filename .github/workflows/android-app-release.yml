@@ -32,7 +32,7 @@
 name: Android App Release
 
 on:
-  pull_request:
+  pull_request_target:
     types: [assigned, opened, synchronize, reopened, closed]
 
 jobs:
@@ -41,7 +41,11 @@ jobs:
     # We run this job only when the PR branch starts with 'android-release/'.
     if: startsWith(github.head_ref, 'android-release/')
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{github.event.pull_request.head.ref}}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Check Release Version
         id: check_release_version
         run: |
@@ -56,7 +60,8 @@ jobs:
           fi
 
           echo "::set-output name=release_version::${gradle_version}"
-          echo "::set-output name=pr_merged::${{ github.event.pull_request.merged }}"
+          echo "::set-output name=pr_merged::${{ github.event.pull_request_target.merged }}"
+          echo "::set-output name=pr_merged::true"
       - name: Bootstrap
         run: |
           script/bootstrap.sh
