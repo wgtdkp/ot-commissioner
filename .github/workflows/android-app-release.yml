@@ -59,6 +59,8 @@ jobs:
             exit 1
           fi
 
+          echo "dummy"
+
           echo "::set-output name=release_version::${gradle_version}"
           echo "::set-output name=pr_merged::${{ github.event.pull_request_target.merged }}"
           echo "::set-output name=pr_merged::true"
