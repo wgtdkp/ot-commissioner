@@ -50,6 +50,10 @@ endif()
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (ANDROID)
+    set (CMAKE_THREAD_LIBS_INIT 1)
+endif()
+
 execute_process(
     COMMAND git describe HEAD --always
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
