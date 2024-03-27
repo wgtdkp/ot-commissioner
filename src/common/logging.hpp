@@ -55,7 +55,6 @@
 #define LOG(aLevel, aRegion, aFmt, ...)                                     \
     do                                                                      \
     {                                                                       \
-        Log(aLevel, aRegion, fmt::format(FMT_STRING(aFmt), ##__VA_ARGS__)); \
     } while (false)
 
 #define LOG_DEBUG(aRegion, aFmt, ...) LOG(LogLevel::kDebug, aRegion, aFmt, ##__VA_ARGS__)

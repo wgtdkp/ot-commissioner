@@ -51,7 +51,7 @@ set_property(SOURCE commissioner.i PROPERTY CPLUSPLUS ON)
 set(UseSWIG_TARGET_NAME_PREFERENCE LEGACY)
 
 swig_add_library(commissioner-java
-    TYPE SHARED
+    TYPE STATIC
     LANGUAGE java
     SOURCES commissioner.i)
 

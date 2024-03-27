@@ -54,12 +54,14 @@ cmake -GNinja \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_CXX_STANDARD=11 \
     -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=MinSizeRel \
     -DOT_COMM_ANDROID=ON \
     -DOT_COMM_JAVA_BINDING=ON \
     -DOT_COMM_APP=OFF \
     -DOT_COMM_TEST=OFF \
     -DOT_COMM_CCM=OFF \
+    -DCMAKE_C_FLAGS="-Os -g0 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS="-Os -g0 -DNDEBUG" \
     ../..
 
 ninja commissioner-java
@@ -75,9 +77,9 @@ find ./io/openthread/commissioner -name "*.class" | xargs jar cvf ../../libs/lib
 cd ../../../
 
 ## Copy shared native libraries
-cp "$BUILD_DIR"/src/java/libcommissioner-java.so "$BUILD_DIR"/libs
+cp "$BUILD_DIR"/src/java/libcommissioner-java.a "$BUILD_DIR"/libs
 
 mkdir -p openthread_commissioner/service/libs
 mkdir -p openthread_commissioner/service/src/main/jniLibs/"${ANDROID_ABI}"
 cp "$BUILD_DIR"/libs/libotcommissioner.jar openthread_commissioner/service/libs
-cp "$BUILD_DIR"/libs/*.so openthread_commissioner/service/src/main/jniLibs/"${ANDROID_ABI}"
+cp "$BUILD_DIR"/libs/libcommissioner-java.a openthread_commissioner/service/src/main/jniLibs/"${ANDROID_ABI}"
