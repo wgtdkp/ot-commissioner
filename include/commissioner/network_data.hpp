@@ -250,26 +250,6 @@ enum SecurityPolicyFlags
 };
 
 /**
- * A PAN identifier.
- */
-struct PanId
-{
-    static constexpr uint64_t kEmptyPanId = 0;
-
-    uint16_t mValue;
-    explicit PanId(uint16_t aValue);
-    PanId(const PanId &aOther) = default;
-    PanId();
-
-    PanId   &operator=(const PanId &aValue) = default;
-    PanId   &operator=(uint16_t aValue);
-    explicit operator uint16_t() const;
-    explicit operator std::string() const;
-
-    Error FromHex(const std::string &aInput);
-};
-
-/**
  * @brief The Active Operational Dataset of the Thread Network Data.
  *
  * Each data field except `mActiveTimestamp` is optional. The field is
@@ -289,7 +269,7 @@ struct ActiveOperationalDataset
     ByteArray      mMeshLocalPrefix;
     ByteArray      mNetworkMasterKey;
     std::string    mNetworkName;
-    PanId          mPanId;
+    uint16_t       mPanId;
     ByteArray      mPSKc;
     SecurityPolicy mSecurityPolicy;
 

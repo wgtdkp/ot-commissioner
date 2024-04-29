@@ -188,58 +188,6 @@ Error XpanId::FromHex(const std::string &aInput)
     return ERROR_NONE;
 }
 
-PanId::PanId(uint16_t aValue)
-    : mValue(aValue)
-{
-}
-
-PanId::PanId()
-    : PanId(kEmptyPanId)
-{
-}
-
-PanId &PanId::operator=(uint16_t aValue)
-{
-    mValue = aValue;
-    return *this;
-}
-
-PanId::operator uint16_t() const
-{
-    return mValue;
-}
-
-PanId::operator std::string() const
-{
-    std::ostringstream value;
-    value << "0x" << std::uppercase << std::hex << std::setw(sizeof(mValue) * 2) << std::setfill('0') << mValue;
-    return value.str();
-}
-
-Error PanId::FromHex(const std::string &aInput)
-{
-    mValue = 0;
-
-    std::string input = aInput;
-    if (utils::ToLower(input.substr(0, 2)) == "0x")
-    {
-        input = input.substr(2);
-    }
-    if (input.empty() || input.length() > 4)
-        return ERROR_BAD_FORMAT("{}: wrong PAN ID string length", input.length());
-    for (auto c : input)
-    {
-        if (!std::isxdigit(c))
-        {
-            return ERROR_BAD_FORMAT("{}: not a hex string", input);
-        }
-    }
-
-    std::istringstream is(input);
-    is >> std::hex >> mValue;
-    return ERROR_NONE;
-}
-
 ActiveOperationalDataset::ActiveOperationalDataset()
     : mActiveTimestamp(Timestamp::Cur())
     , mPresentFlags(kActiveTimestampBit)

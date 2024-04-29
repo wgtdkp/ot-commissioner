@@ -417,18 +417,6 @@ static void from_json(const Json &aJson, SecurityPolicy &aSecurityPolicy)
 #undef SET
 }
 
-static void to_json(Json &aJson, const ot::commissioner::PanId &aPanId)
-{
-    aJson = std::string(aPanId);
-}
-
-static void from_json(const Json &aJson, ot::commissioner::PanId &aPanId)
-{
-    std::string panIdStr;
-    panIdStr = aJson.get<std::string>();
-    SuccessOrThrow(aPanId.FromHex(panIdStr));
-}
-
 static void to_json(Json &aJson, const ActiveOperationalDataset &aDataset)
 {
 #define SET_IF_PRESENT(name)                                             \
@@ -447,9 +435,13 @@ static void to_json(Json &aJson, const ActiveOperationalDataset &aDataset)
         aJson["MeshLocalPrefix"] = Ipv6PrefixToString(aDataset.mMeshLocalPrefix);
     };
 
+    if (aDataset.mPresentFlags & ActiveOperationalDataset::kPanIdBit)
+    {
+        aJson["PanId"] = utils::Hex(aDataset.mPanId);
+    }
+
     SET_IF_PRESENT(NetworkMasterKey);
     SET_IF_PRESENT(NetworkName);
-    SET_IF_PRESENT(PanId);
     SET_IF_PRESENT(PSKc);
     SET_IF_PRESENT(SecurityPolicy);
 
@@ -484,9 +476,14 @@ static void from_json(const Json &aJson, ActiveOperationalDataset &aDataset)
         aDataset.mPresentFlags |= ActiveOperationalDataset::kMeshLocalPrefixBit;
     };
 
+    if (aJson.contains("PanId"))
+    {
+        SuccessOrThrow(utils::ParseInteger(aDataset.mPanId, aJson["PanId"]));
+        aDataset.mPresentFlags |= ActiveOperationalDataset::kPanIdBit;
+    }
+
     SET_IF_PRESENT(NetworkMasterKey);
     SET_IF_PRESENT(NetworkName);
-    SET_IF_PRESENT(PanId);
     SET_IF_PRESENT(PSKc);
     SET_IF_PRESENT(SecurityPolicy);
 

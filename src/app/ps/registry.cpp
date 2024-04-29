@@ -484,23 +484,32 @@ Registry::Status Registry::GetNetworksByAliases(const StringArray &aAliases,
         }
         else
         {
-            Network nwk;
-            XpanId  xpid;
-            PanId   pid;
+            Network  nwk;
+            XpanId   xpid;
+            uint16_t pid;
 
             status = Registry::Status::kNotFound;
             if (xpid.FromHex(alias) == ERROR_NONE)
             {
                 status = GetNetworkByXpan(xpid, nwk);
             }
+
             if (status != Registry::Status::kSuccess)
             {
                 status = GetNetworkByName(alias, nwk);
             }
-            if (status != Registry::Status::kSuccess && pid.FromHex(alias) == ERROR_NONE)
+
+            if (status != Registry::Status::kSuccess)
             {
-                status = GetNetworkByPan(alias, nwk);
+                bool        hasHexPrefix = utils::ToLower(alias.substr(0, 2)) != "0x";
+                std::string aliasAsPanId = std::string(hasHexPrefix ? "0x" : "") + alias;
+
+                if (utils::ParseInteger(pid, aliasAsPanId) == ERROR_NONE)
+                {
+                    status = GetNetworkByPan(aliasAsPanId, nwk);
+                }
             }
+
             if (status == Registry::Status::kSuccess)
             {
                 networks.push_back(nwk);
@@ -608,9 +617,10 @@ Registry::Status Registry::GetNetworkByName(const std::string &aName, Network &a
 
 Registry::Status Registry::GetNetworkByPan(const std::string &aPan, Network &aRet)
 {
-    Network nwk{};
-    PanId   panId;
-    if (panId.FromHex(aPan).GetCode() != ErrorCode::kNone)
+    Network  nwk{};
+    uint16_t panId = 0;
+
+    if (utils::ParseInteger(panId, aPan).GetCode() != ErrorCode::kNone)
     {
         return Registry::Status::kError;
     }

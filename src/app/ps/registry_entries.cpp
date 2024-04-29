@@ -156,7 +156,7 @@ void to_json(json &aJson, const Network &aValue)
     aJson = json{{JSON_ID, aValue.mId},
                  {JSON_DOM_REF, aValue.mDomainId},
                  {JSON_NAME, aValue.mName},
-                 {JSON_PAN, std::string(aValue.mPan)},
+                 {JSON_PAN, utils::Hex(aValue.mPan)},
                  {JSON_XPAN, std::string(aValue.mXpan)},
                  {JSON_CHANNEL, aValue.mChannel},
                  {JSON_MLP, aValue.mMlp},
@@ -165,13 +165,14 @@ void to_json(json &aJson, const Network &aValue)
 
 void from_json(const json &aJson, Network &aValue)
 {
+    std::string hexStr;
+
     aJson.at(JSON_ID).get_to(aValue.mId);
     aJson.at(JSON_DOM_REF).get_to(aValue.mDomainId);
     aJson.at(JSON_NAME).get_to(aValue.mName);
 
-    std::string hexStr;
     aJson.at(JSON_PAN).get_to(hexStr);
-    SuccessOrThrow(aValue.mPan.FromHex(hexStr));
+    SuccessOrThrow(utils::ParseInteger(aValue.mPan, hexStr));
     aJson.at(JSON_XPAN).get_to(hexStr);
     SuccessOrThrow(aValue.mXpan.FromHex(hexStr));
 

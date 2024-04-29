@@ -56,6 +56,7 @@
 #include "commissioner/defines.hpp"
 #include "commissioner/error.hpp"
 #include "commissioner/network_data.hpp"
+#include "common/utils.hpp"
 #include "fmt/core.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-spec-builders.h"
@@ -63,6 +64,7 @@
 #include "nlohmann/json.hpp"
 
 using namespace ot::commissioner;
+using namespace ot::commissioner::utils;
 using namespace ot::commissioner::persistent_storage;
 
 using testing::_;
@@ -1802,7 +1804,7 @@ TEST_F(InterpreterTestSuite, PC_OpdatasetGetActive)
               PersistentStorage::Status::kSuccess);
     Network nwk;
     EXPECT_EQ(ctx.mRegistry->mStorage->Get(nwk_id, nwk), PersistentStorage::Status::kSuccess);
-    EXPECT_EQ((std::string)nwk.mPan, "0x0000");
+    EXPECT_EQ(utils::Hex(nwk.mPan), "0x0000");
 
     EXPECT_CALL(*ctx.mDefaultCommissionerObject, GetActiveDataset(_, _))
         .Times(2)
@@ -1821,7 +1823,7 @@ TEST_F(InterpreterTestSuite, PC_OpdatasetGetActive)
     EXPECT_TRUE(value.HasNoError());
 
     EXPECT_EQ(ctx.mRegistry->mStorage->Get(nwk_id, nwk), PersistentStorage::Status::kSuccess);
-    EXPECT_EQ(nwk.mPan.mValue, 0x0001);
+    EXPECT_EQ(nwk.mPan, 0x0001);
 
     EXPECT_EQ(system("rm -f ./aods.json"), 0);
     EXPECT_NE(PathExists("./aods.json").GetCode(), ErrorCode::kNone);

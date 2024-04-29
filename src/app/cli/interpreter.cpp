@@ -121,6 +121,8 @@ namespace ot {
 namespace commissioner {
 
 using ot::commissioner::persistent_storage::Network;
+using ot::commissioner::utils::Hex;
+using ot::commissioner::utils::ParseInteger;
 
 namespace {
 /**
@@ -348,23 +350,6 @@ template <typename T> static std::string ToHex(T aInteger)
 {
     return "0x" + utils::Hex(utils::Encode(aInteger));
 };
-
-template <typename T> static Error ParseInteger(T &aInteger, const std::string &aStr)
-{
-    Error    error;
-    uint64_t integer;
-    char    *endPtr = nullptr;
-
-    integer = strtoull(aStr.c_str(), &endPtr, 0);
-
-    VerifyOrExit(endPtr != nullptr && endPtr > aStr.c_str(),
-                 error = ERROR_INVALID_ARGS("{} is not a valid integer", aStr));
-
-    aInteger = integer;
-
-exit:
-    return error;
-}
 
 static inline std::string ToLower(const std::string &aStr)
 {
@@ -2100,7 +2085,7 @@ Interpreter::Value Interpreter::ProcessOpDatasetJob(CommissionerAppPtr &aCommiss
     }
     else if (CaseInsensitiveEqual(aExpr[2], "panid"))
     {
-        PanId panid;
+        uint16_t panid;
         if (isSet)
         {
             uint32_t delay;
@@ -2112,7 +2097,7 @@ Interpreter::Value Interpreter::ProcessOpDatasetJob(CommissionerAppPtr &aCommiss
         else
         {
             SuccessOrExit(value = aCommissioner->GetPanId(panid));
-            value = std::string(panid);
+            value = Hex(panid);
         }
     }
     else if (CaseInsensitiveEqual(aExpr[2], "pskc"))
@@ -2177,7 +2162,7 @@ Interpreter::Value Interpreter::ProcessOpDatasetJob(CommissionerAppPtr &aCommiss
             {
                 if ((dataset.mPresentFlags & ActiveOperationalDataset::kPanIdBit) != 0)
                 {
-                    nwkAliases.push_back(fmt::format(FMT_STRING("0x{:04X}"), dataset.mPanId.mValue));
+                    nwkAliases.push_back(Hex(dataset.mPanId));
                 }
                 else if ((dataset.mPresentFlags & ActiveOperationalDataset::kNetworkNameBit) != 0)
                 {
@@ -2215,10 +2200,10 @@ Interpreter::Value Interpreter::ProcessOpDatasetJob(CommissionerAppPtr &aCommiss
             nwk.mName    = AODS_FIELD_IF_IS_SET(NetworkName, "");
             nwk.mXpan    = AODS_FIELD_IF_IS_SET(ExtendedPanId, XpanId{});
             nwk.mChannel = AODS_FIELD_IF_IS_SET(Channel, (Channel{0, 0})).mNumber;
-            nwk.mPan     = AODS_FIELD_IF_IS_SET(PanId, PanId{});
+            nwk.mPan     = AODS_FIELD_IF_IS_SET(PanId, 0);
             if ((dataset.mPresentFlags & ActiveOperationalDataset::kPanIdBit) == 0)
             {
-                nwk.mPan = PanId::kEmptyPanId;
+                nwk.mPan = 0;
             }
             else
             {

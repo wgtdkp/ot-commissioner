@@ -372,7 +372,7 @@ PersistentStorage::Status PersistentStorageJson::Lookup(Network const &aValue, s
                     (aValue.mDomainId.mId == EMPTY_ID || (el.mDomainId.mId == aValue.mDomainId.mId)) &&
                     (aValue.mName.empty() || (aValue.mName == el.mName)) &&
                     (aValue.mXpan.mValue == XpanId::kEmptyXpanId || aValue.mXpan == el.mXpan) &&
-                    (aValue.mPan.mValue == PanId::kEmptyPanId || (aValue.mPan.mValue == el.mPan.mValue)) &&
+                    (aValue.mPan == 0 || (aValue.mPan == el.mPan)) &&
                     (aValue.mMlp.empty() || CaseInsensitiveEqual(aValue.mMlp, el.mMlp)) &&
                     (aValue.mChannel == 0 || (aValue.mChannel == el.mChannel));
 
@@ -477,7 +477,7 @@ PersistentStorage::Status PersistentStorageJson::LookupAny(Network const &aValue
                     (aValue.mDomainId.mId == EMPTY_ID || (el.mDomainId.mId == aValue.mDomainId.mId)) ||
                     (aValue.mName.empty() || (aValue.mName == el.mName)) ||
                     (aValue.mXpan.mValue == XpanId::kEmptyXpanId || aValue.mXpan == el.mXpan) ||
-                    (aValue.mPan.mValue == PanId::kEmptyPanId || (aValue.mPan.mValue == el.mPan.mValue)) ||
+                    (aValue.mPan == 0 || (aValue.mPan == el.mPan)) ||
                     (aValue.mMlp.empty() || CaseInsensitiveEqual(aValue.mMlp, el.mMlp)) ||
                     (aValue.mChannel == 0 || (aValue.mChannel == el.mChannel));
 
