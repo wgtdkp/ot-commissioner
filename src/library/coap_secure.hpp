@@ -84,6 +84,16 @@ public:
 
     void Connect(DtlsSession::ConnectHandler aOnConnected, const std::string &aPeerAddr, uint16_t aPeerPort)
     {
+        if (int fail = mSocket->Bind("::", 0))
+        {
+            if (aOnConnected != nullptr)
+            {
+                aOnConnected(mDtlsSession, ERROR_IO_ERROR("bind to [::]:0 failed: {}",
+                                                          aPeerAddr, aPeerPort, fail));
+                ExitNow();
+            }
+        }
+
         if (int fail = mSocket->Connect(aPeerAddr, aPeerPort))
         {
             if (aOnConnected != nullptr)
