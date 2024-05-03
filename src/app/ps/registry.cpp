@@ -175,7 +175,7 @@ Registry::Status Registry::Add(BorderAgent const &aValue)
             // Decided: update network aName in the network entity
             if ((aValue.mPresentFlags & BorderAgent::kExtendedPanIdBit) != 0)
             {
-                nwk.mXpan = XpanId{aValue.mExtendedPanId};
+                nwk.mXpan = aValue.mExtendedPanId;
             }
             else
             {
@@ -199,7 +199,7 @@ Registry::Status Registry::Add(BorderAgent const &aValue)
                     nwk.mName = aValue.mNetworkName;
                 }
                 nwk.mDomainId = dom.mId;
-                nwk.mXpan     = XpanId{aValue.mExtendedPanId};
+                nwk.mXpan     = aValue.mExtendedPanId;
 
                 // Provisionally set network's CCM flag considering
                 // advertised Connection Mode.
@@ -293,7 +293,7 @@ Registry::Status Registry::GetBorderRouter(const BorderRouterId aRawId, BorderRo
     return MapStatus(mStorage->Get(aRawId, br));
 }
 
-Registry::Status Registry::GetBorderRoutersInNetwork(const XpanId aXpan, BorderRouterArray &aRet)
+Registry::Status Registry::GetBorderRoutersInNetwork(uint64_t aXpan, BorderRouterArray &aRet)
 {
     Network          nwk;
     BorderRouter     pred;
@@ -306,7 +306,7 @@ exit:
     return status;
 }
 
-Registry::Status Registry::GetNetworkXpansInDomain(const std::string &aDomainName, XpanIdArray &aRet)
+Registry::Status Registry::GetNetworkXpansInDomain(const std::string &aDomainName, std::vector<uint64_t> &aRet)
 {
     NetworkArray     networks;
     Registry::Status status = GetNetworksInDomain(aDomainName, networks);
@@ -421,9 +421,9 @@ Registry::Status Registry::GetAllNetworks(NetworkArray &aRet)
     return status;
 }
 
-Registry::Status Registry::GetNetworkXpansByAliases(const StringArray &aAliases,
-                                                    XpanIdArray       &aRet,
-                                                    StringArray       &aUnresolved)
+Registry::Status Registry::GetNetworkXpansByAliases(const StringArray     &aAliases,
+                                                    std::vector<uint64_t> &aRet,
+                                                    StringArray           &aUnresolved)
 {
     NetworkArray     networks;
     Registry::Status status = GetNetworksByAliases(aAliases, networks, aUnresolved);
@@ -485,11 +485,11 @@ Registry::Status Registry::GetNetworksByAliases(const StringArray &aAliases,
         else
         {
             Network  nwk;
-            XpanId   xpid;
+            uint64_t xpid;
             uint16_t pid;
 
             status = Registry::Status::kNotFound;
-            if (xpid.FromHex(alias) == ERROR_NONE)
+            if (utils::ParseInteger(xpid, alias) == ERROR_NONE)
             {
                 status = GetNetworkByXpan(xpid, nwk);
             }
@@ -542,7 +542,7 @@ Registry::Status Registry::ForgetCurrentNetwork()
     return SetCurrentNetwork(NetworkId{});
 }
 
-Registry::Status Registry::SetCurrentNetwork(const XpanId &aXpan)
+Registry::Status Registry::SetCurrentNetwork(uint64_t aXpan)
 {
     Network          nwk;
     Registry::Status status;
@@ -580,7 +580,7 @@ Registry::Status Registry::GetCurrentNetwork(Network &aRet)
                                        : MapStatus(mStorage->Get(networkId, aRet));
 }
 
-Registry::Status Registry::GetCurrentNetworkXpan(XpanId &aRet)
+Registry::Status Registry::GetCurrentNetworkXpan(uint64_t &aRet)
 {
     Registry::Status status;
     Network          nwk;
@@ -601,7 +601,7 @@ exit:
     return status;
 }
 
-Registry::Status Registry::GetNetworkByXpan(const XpanId &aXpan, Network &aRet)
+Registry::Status Registry::GetNetworkByXpan(uint64_t aXpan, Network &aRet)
 {
     Network nwk{};
     nwk.mXpan = aXpan;
@@ -628,7 +628,7 @@ Registry::Status Registry::GetNetworkByPan(const std::string &aPan, Network &aRe
     return LookupOne(nwk, aRet);
 }
 
-Registry::Status Registry::GetDomainNameByXpan(const XpanId &aXpan, std::string &aName)
+Registry::Status Registry::GetDomainNameByXpan(uint64_t aXpan, std::string &aName)
 {
     Registry::Status status;
     Network          nwk;
@@ -763,13 +763,13 @@ exit:
 
 Registry::Status Registry::DeleteBorderRoutersInDomain(const std::string &aDomainName)
 {
-    Domain           dom;
-    DomainArray      doms;
-    Registry::Status status;
-    Network          current;
-    XpanIdArray      xpans;
-    StringArray      aAliases;
-    StringArray      aUnresolved;
+    Domain                dom;
+    DomainArray           doms;
+    Registry::Status      status;
+    Network               current;
+    std::vector<uint64_t> xpans;
+    StringArray           aAliases;
+    StringArray           aUnresolved;
 
     dom.mName = aDomainName;
     VerifyOrExit((status = MapStatus(mStorage->Lookup(dom, doms))) == Registry::Status::kSuccess);
@@ -789,7 +789,7 @@ Registry::Status Registry::DeleteBorderRoutersInDomain(const std::string &aDomai
 
     for (auto &&xpan : xpans)
     {
-        aAliases.push_back(XpanId(xpan).str());
+        aAliases.push_back(utils::Hex(xpan));
     }
     VerifyOrExit((status = DeleteBorderRoutersInNetworks(aAliases, aUnresolved)) == Registry::Status::kSuccess);
     VerifyOrExit(aUnresolved.empty(), status = Registry::Status::kAmbiguity);

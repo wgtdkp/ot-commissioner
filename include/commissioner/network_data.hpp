@@ -53,36 +53,6 @@ static constexpr uint8_t kMlrStatusNotPrimary  = 5;
 static constexpr uint8_t kMlrStatusFailure     = 6;
 
 /**
- * Extended PAN Id wrapper
- */
-struct XpanId
-{
-    static constexpr uint64_t kEmptyXpanId = 0;
-
-    uint64_t mValue;
-
-    XpanId(uint64_t val);
-
-    XpanId();
-
-    std::string str() const;
-
-    bool operator==(const XpanId &aOther) const;
-
-    bool operator!=(const XpanId &aOther) const;
-    bool operator<(const XpanId &aOther) const;
-
-    explicit operator std::string() const;
-
-    /**
-     * Decodes hexadecimal string.
-     */
-    Error FromHex(const std::string &aInput);
-};
-
-typedef std::vector<XpanId> XpanIdArray;
-
-/**
  * @brief The Commissioner Dataset of the Thread Network Data.
  *
  * Each data field of Commissioner Dataset is optional. The field is
@@ -263,13 +233,13 @@ enum SecurityPolicyFlags
 struct ActiveOperationalDataset
 {
     Timestamp      mActiveTimestamp;
+    ByteArray      mExtendedPanId;
+    uint16_t       mPanId;
+    std::string    mNetworkName;
     Channel        mChannel;
     ChannelMask    mChannelMask;
-    XpanId         mExtendedPanId;
     ByteArray      mMeshLocalPrefix;
     ByteArray      mNetworkMasterKey;
-    std::string    mNetworkName;
-    uint16_t       mPanId;
     ByteArray      mPSKc;
     SecurityPolicy mSecurityPolicy;
 

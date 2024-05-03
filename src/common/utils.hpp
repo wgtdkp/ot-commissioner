@@ -189,13 +189,17 @@ std::string ToLower(const std::string &aStr);
 
 bool CaseInsensitiveEqual(const std::string &aLhs, const std::string &aRhs);
 
-/** Returns the Hex string of a `uint16_t` integer with zero paddings. */
-inline static std::string Hex(uint16_t aInteger)
+/**
+ * Returns the Hex string of an integer with zero paddings.
+ *
+ * For example, it returns "0xface" for integer 0xface.
+ */
+template <typename T> std::string Hex(T aInteger)
 {
-    return fmt::format(FMT_STRING("0x{:04X}"), aInteger);
+    return std::string("0x") + Hex(Encode(aInteger));
 }
 
-template <typename T> static Error ParseInteger(T &aInteger, const std::string &aStr)
+template <typename T> Error ParseInteger(T &aInteger, const std::string &aStr)
 {
     Error    error;
     uint64_t integer;
