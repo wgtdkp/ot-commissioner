@@ -27,7 +27,6 @@
 #
 
 set(JAVA_PACKAGE_NAME io.openthread.commissioner)
-set(JAVA_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/io/openthread/commissioner)
 
 find_package(SWIG 4.0 REQUIRED)
 find_package(Java REQUIRED)
@@ -74,6 +73,14 @@ install(TARGETS commissioner-java
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
+get_property(GENERATED_JAVA_SRCS TARGET commissioner-java PROPERTY SWIG_SUPPORT_FILES)
+
+add_jar(commissioner-java-lib
+    ${GENERATED_JAVA_SRCS}
+)
+
+add_dependencies(commissioner-java-lib commissioner-java)
+
 ## It is useful that the output directory can be configured when
 ## OT commissioner is integrated with an existing Android application.
 if (OT_COMM_JAVA_BINDING_OUTDIR)
@@ -82,5 +89,5 @@ if (OT_COMM_JAVA_BINDING_OUTDIR)
         COMMAND cp io/openthread/commissioner/*.java ${OT_COMM_JAVA_BINDING_OUTDIR}/io/openthread/commissioner
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "packing generated Java source files..."
-    )
+   )
 endif()

@@ -39,6 +39,32 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DOT_COMM_ANDROID=ON",
+                        "-DOT_COMM_JAVA_BINDING=ON",
+                        "-DBUILD_SHARED_LIBS=OFF",
+                        "-DCMAKE_CXX_STANDARD=11",
+                        "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
+                        "-DCMAKE_BUILD_TYPE=Release",
+                        "-DOT_COMM_APP=OFF",
+                        "-DOT_COMM_TEST=OFF",
+                        "-DOT_COMM_CCM=OFF",
+                        "-DOT_COMM_JAR_DIR=libs"
+
+                targets "commissioner-java", "commissioner-java-lib"
+            }
+        }
+    }
+
+    externalNativeBuild {
+
+        // Encapsulates your CMake build configurations.
+        cmake {
+            // Provides a relative path to your CMake build script.
+            path "../../../CMakeLists.txt"
+        }
     }
 
     buildTypes {
@@ -52,6 +78,15 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     namespace 'io.openthread.commissioner.service'
+    sourceSets.main.java.srcDirs += 'src/genlibs/java'
+}
+
+project.afterEvaluate {
+    // Not sure how much of a hack this is - but it allows CMake/SWIG to run before Android Studio
+    // complains about missing generated files
+    // TODO: Probably need a release hook too?
+    compileDebugJavaWithJavac.dependsOn externalNativeBuildDebug
+    javaPreCompileRelease.dependsOn externalNativeBuildRelease
 }
 
 // This is for the local tests (src/test) to find the native libraries.
