@@ -34,6 +34,34 @@
  *
  */
 
+// Defines %ignoreall and %unignore for explicit API declaration.
+// Usage:
+//
+// %ignoreall
+// %unignore SomeName;   // explcitly allow an API
+// %include "somelib.h"
+#ifndef ignoreall
+%define %ignoreall %ignore ""; %enddef
+#endif
+
+#ifndef unignore
+%define %unignore %rename("%s") %enddef
+#endif
+
+#ifndef unignore_method
+%define %unignore_method %rename("%(lowercamelcase)s") %enddef
+#endif
+
+#ifndef unignore_field
+%define %unignore_field %rename("%(regex:/^(m)(.*)/\\2/)s") %enddef
+#endif
+
+#ifndef unignoreall
+%define %unignoreall %rename("%s") ""; %enddef
+#endif
+
+%ignoreall
+
 %module(directors="1") commissionerModule
 
 %{
@@ -77,10 +105,10 @@
 %apply const unsigned long long & { const uint64_t & };
 
 // Remove the 'm' prefix of all members.
-%rename("%(regex:/^(m)(.*)/\\2/)s") "";
+// %rename("%(regex:/^(m)(.*)/\\2/)s") "";
 
 // Convert first character of function names to lowercase.
-%rename("%(firstlowercase)s", %$isfunction) "";
+// %rename("%(firstlowercase)s", %$isfunction) "";
 
 // Insert the code of loading native shared library into generated Java class.
 %pragma(java) jniclasscode=%{
@@ -125,66 +153,82 @@
 %shared_ptr(ot::commissioner::Logger)
 %shared_ptr(ot::commissioner::Commissioner)
 
-namespace ot {
-namespace commissioner {
-    // Remove async commissioner APIs.
-    %ignore Commissioner::Connect(ErrorHandler aHandler, const std::string &aAddr, uint16_t aPort);
-    %ignore Commissioner::Petition(PetitionHandler aHandler, const std::string &aAddr, uint16_t aPort);
-    %ignore Commissioner::Resign(ErrorHandler aHandler);
-    %ignore Commissioner::GetCommissionerDataset(Handler<CommissionerDataset> aHandler, uint16_t aDatasetFlags);
-    %ignore Commissioner::SetCommissionerDataset(ErrorHandler aHandler, const CommissionerDataset &aDataset);
-    %ignore Commissioner::SetBbrDataset(ErrorHandler aHandler, const BbrDataset &aDataset);
-    %ignore Commissioner::GetBbrDataset(Handler<BbrDataset> aHandler, uint16_t aDatasetFlags);
-    %ignore Commissioner::GetRawActiveDataset(Handler<ByteArray> aHandler, uint16_t aDatasetFlags);
-    %ignore Commissioner::GetActiveDataset(Handler<ActiveOperationalDataset> aHandler, uint16_t aDatasetFlags);
-    %ignore Commissioner::SetActiveDataset(ErrorHandler aHandler, const ActiveOperationalDataset &aActiveDataset);
-    %ignore Commissioner::GetPendingDataset(Handler<PendingOperationalDataset> aHandler, uint16_t aDatasetFlags);
-    %ignore Commissioner::SetPendingDataset(ErrorHandler aHandler, const PendingOperationalDataset &aPendingDataset);
-    %ignore Commissioner::SetSecurePendingDataset(ErrorHandler                     aHandler,
-                                                  uint32_t                         aMaxRetrievalTimer,
-                                                  const PendingOperationalDataset &aDataset);
-    %ignore Commissioner::CommandReenroll(ErrorHandler aHandler, const std::string &aDstAddr);
-    %ignore Commissioner::CommandDomainReset(ErrorHandler aHandler, const std::string &aDstAddr);
-    %ignore Commissioner::CommandMigrate(ErrorHandler       aHandler,
-                                         const std::string &aDstAddr,
-                                         const std::string &aDesignatedNetwork);
-    %ignore Commissioner::AnnounceBegin(ErrorHandler       aHandler,
-                                        uint32_t           aChannelMask,
-                                        uint8_t            aCount,
-                                        uint16_t           aPeriod,
-                                        const std::string &aDstAddr);
-    %ignore Commissioner::PanIdQuery(ErrorHandler       aHandler,
-                                     uint32_t           aChannelMask,
-                                     uint16_t           aPanId,
-                                     const std::string &aDstAddr);
-    %ignore Commissioner::EnergyScan(ErrorHandler       aHandler,
-                                     uint32_t           aChannelMask,
-                                     uint8_t            aCount,
-                                     uint16_t           aPeriod,
-                                     uint16_t           aScanDuration,
-                                     const std::string &aDstAddr);
-    %ignore Commissioner::RegisterMulticastListener(Handler<uint8_t>                aHandler,
-                                                    const std::vector<std::string> &aMulticastAddrList,
-                                                    uint32_t                        aTimeout);
-    %ignore Commissioner::RequestToken(Handler<ByteArray> aHandler, const std::string &aAddr, uint16_t aPort);
+%unignore ot;
+%unignore ot::commissioner;
+%unignore ot::commissioner::Commissioner;
+%unignore_method ot::commissioner::Commissioner::Create;
+%unignore_method ot::commissioner::Commissioner::Init;
+%unignore_method ot::commissioner::Commissioner::GetConfig;
+%unignore_method ot::commissioner::Commissioner::Connect(const std::string &aAddr, uint16_t aPort);
+%unignore_method ot::commissioner::Commissioner::Disconnect;
+%unignore_method ot::commissioner::Commissioner::GetSessionId;
+%unignore_method ot::commissioner::Commissioner::GetState;
+%unignore_method ot::commissioner::Commissioner::IsActive;
+%unignore_method ot::commissioner::Commissioner::IsCcmMode;
+%unignore_method ot::commissioner::Commissioner::GetDomainName;
+%unignore_method ot::commissioner::Commissioner::CancelRequests;
+%unignore_method ot::commissioner::Commissioner::Petition(std::string &aExistingCommissionerId, const std::string &aAddr, uint16_t aPort);
+%unignore_method ot::commissioner::Commissioner::Resign();
+%unignore_method ot::commissioner::Commissioner::GetCommissionerDataset(CommissionerDataset &aDataset, uint16_t aDatasetFlags);
+%unignore_method ot::commissioner::Commissioner::SetCommissionerDataset(const CommissionerDataset &aDataset);
+%unignore_method ot::commissioner::Commissioner::SetBbrDataset(const BbrDataset &aDataset);
+%unignore_method ot::commissioner::Commissioner::GetBbrDataset(BbrDataset &aDataset, uint16_t aDatasetFlags);
+%unignore_method ot::commissioner::Commissioner::GetActiveDataset(ActiveOperationalDataset &aDataset, uint16_t aDatasetFlags);
+%unignore_method ot::commissioner::Commissioner::GetRawActiveDataset(ByteArray &aRawDataset, uint16_t aDatasetFlags);
+%unignore_method ot::commissioner::Commissioner::SetActiveDataset(const ActiveOperationalDataset &aActiveDataset);
+%unignore_method ot::commissioner::Commissioner::GetPendingDataset(PendingOperationalDataset &aDataset, uint16_t aDatasetFlags);
+%unignore_method ot::commissioner::Commissioner::SetPendingDataset(const PendingOperationalDataset &aPendingDataset);
+%unignore_method ot::commissioner::Commissioner::SetSecurePendingDataset(uint32_t aMaxRetrievalTimer, const PendingOperationalDataset &aDataset);
+%unignore_method ot::commissioner::Commissioner::CommandReenroll(const std::string &aDstAddr);
+%unignore_method ot::commissioner::Commissioner::CommandDomainReset(const std::string &aDstAddr);
+%unignore_method ot::commissioner::Commissioner::CommandMigrate(const std::string &aDstAddr, const std::string &aDesignatedNetwork);
+%unignore_method ot::commissioner::Commissioner::AnnounceBegin(uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, const std::string &aDstAddr);
+%unignore_method ot::commissioner::Commissioner::PanIdQuery(uint32_t aChannelMask, uint16_t aPanId, const std::string &aDstAddr);
+%unignore_method ot::commissioner::Commissioner::EnergyScan(uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod, uint16_t aScanDuration, const std::string &aDstAddr);
+%unignore_method ot::commissioner::Commissioner::RegisterMulticastListener(uint8_t &aStatus, const std::vector<std::string> &aMulticastAddrList, uint32_t aTimeout);
+%unignore_method ot::commissioner::Commissioner::RequestToken(ByteArray &aSignedToken, const std::string &aAddr, uint16_t aPort);
+%unignore_method ot::commissioner::Commissioner::SetToken(const ByteArray &aSignedToken);
+%unignore_method ot::commissioner::Commissioner::GeneratePSKc(ByteArray &aPSKc, const std::string &aPassphrase, const std::string &aNetworkName, const ByteArray &aExtendedPanId);
+%unignore_method ot::commissioner::Commissioner::ComputeJoinerId(uint64_t aEui64);
+%unignore_method ot::commissioner::Commissioner::AddJoiner(ByteArray &aSteeringData, const ByteArray &aJoinerId);
+%unignore_method ot::commissioner::Commissioner::GetVersion(void);
 
-    // Remove operators and move constructor of Error.
-    %ignore Error::operator=(const Error &aError);
-    %ignore Error::Error(Error &&aError) noexcept;
-    %ignore Error::operator=(Error &&aError) noexcept;
-    %ignore Error::operator==(const Error &aOther) const;
-    %ignore Error::operator!=(const Error &aOther) const;
-    %ignore operator==(const Error &aError, const ErrorCode &aErrorCode);
-    %ignore operator!=(const Error &aError, const ErrorCode &aErrorCode);
-    %ignore operator==(const ErrorCode &aErrorCode, const Error &aError);
-    %ignore operator!=(const ErrorCode &aErrorCode, const Error &aError);
-    %ignore PrintTo(const Error &aError, std::ostream *os);
-    %ignore PrintTo(ErrorCode aErrorCode, std::ostream *os);
-}
-}
+%unignore ot::commissioner::State;
+%unignore ot::commissioner::State::kDisabled;
+%unignore ot::commissioner::State::kConnected;
+%unignore ot::commissioner::State::kPetitioning;
+%unignore ot::commissioner::State::kActive;
+
+%unignore ot::commissioner::ActiveOperationalDataset;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mActiveTimestamp;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mExtendedPanId;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mPanId;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mNetworkName;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mChannel;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mChannelMask;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mMeshLocalPrefix;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mNetworkMasterKey;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mPSKc;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mSecurityPolicy;
+%unignore_field ot::commissioner::ActiveOperationalDataset::mPresentFlags;
+%unignore ot::commissioner::ActiveOperationalDataset::kActiveTimestampBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kChannelBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kChannelMaskBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kExtendedPanIdBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kMeshLocalPrefixBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kNetworkMasterKeyBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kNetworkNameBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kPanIdBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kPSKcBit;
+%unignore ot::commissioner::ActiveOperationalDataset::kSecurityPolicyBit;
+%unignore_method ot::commissioner::ActiveOperationalDataset::ActiveOperationalDataset;
+
+
 
 %include <commissioner/defines.hpp>
 %include <commissioner/error.hpp>
 %include <commissioner/network_data.hpp>
 %include <commissioner/commissioner.hpp>
 %include <commissioner/commissioner.hpp>
+
+%unignoreall
